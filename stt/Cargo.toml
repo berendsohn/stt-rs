@@ -1,0 +1,49 @@
+[package]
+name = "stt"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+itertools = "0.10.5"
+num-traits = "0.2"
+nonmax = { version = "0.5.3", optional = true }
+petgraph = { version = "0.6.2", optional = true }
+rand = { version = "0.8", optional = true }
+
+[dev-dependencies]
+petgraph = "0.6.2"
+rand = "0.8"
+
+[profile.release]
+panic = "abort"
+
+[profile.release-lto]
+inherits = "release"
+lto = true
+
+[[test]]
+name = "integration"
+required-features = ["generate", "petgraph"]
+
+[features]
+
+# Use the nonmax crate to reduce space usage of node pointers. Disallows the maximum node index 2^64-1 and incurs a
+# small runtime cost to check that this node index is not used.
+space_efficient_nodes = ["dep:nonmax"]
+
+# Petgraph-based dynamic trees
+petgraph = ["dep:petgraph"]
+
+# Add functionality to randomly generate stuff
+generate = ["dep:rand"]
+
+# Print detailed information about MST computation (slow!)
+verbose_mst = []
+
+# Print detailed information about Link-cut tree operations (slow!)
+verbose_lc = []
+
+# Verify link-cut tree implementation while running (slow!)
+verify_lc = []
