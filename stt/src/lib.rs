@@ -138,6 +138,7 @@ impl NodeIdx {
 	}
 	
 	/// Convert this into `usize`.
+	#[inline]
 	pub fn index( &self ) -> usize {
 		self.raw_idx
 	}
@@ -161,6 +162,7 @@ impl NodeIdx {
 	}
 	
 	/// Convert this into `usize`.
+	#[inline]
 	pub fn index( &self ) -> usize {
 		self.raw_idx.get()
 	}
