@@ -97,6 +97,22 @@ impl<TWeight> Helper<TWeight>
 			} ) )
 		}
 	}
+	
+	fn print_query_type_dist( &self ) {
+		let mut inserts = 0;
+		let mut deletes = 0;
+		let mut path_weights = 0;
+		
+		for query in &self.queries {
+			match query {
+				Query::InsertEdge( _, _, _ ) => inserts += 1,
+				Query::DeleteEdge( _, _ ) => deletes += 1,
+				Query::PathWeight( _, _ ) => path_weights +=1
+			}
+		}
+		
+		println!( "Generated {inserts}x Link, {deletes}x Cut, {path_weights}x PathWeight" );
+	}
 }
 
 
@@ -107,6 +123,7 @@ fn benchmark_empty( helper : &Helper<EmptyGroupWeight>, impls: &Vec<ImplDesc> ) 
 	if helper.print == Print {
 		println!( "Benchmarking {} connectivity queries on {} vertices",
 			helper.queries.len(), helper.num_vertices );
+		helper.print_query_type_dist();
 	}
 	
 	macro_rules! do_benchmark_empty {
@@ -125,6 +142,7 @@ fn benchmark_group( helper : &Helper<IsizeAddGroupWeight>, impls: &Vec<ImplDesc>
 	if helper.print == Print {
 		println!( "Benchmarking {} signed-sum queries on {} vertices",
 			helper.queries.len(), helper.num_vertices );
+		helper.print_query_type_dist();
 	}
 	
 	macro_rules! do_benchmark_group {
@@ -143,6 +161,7 @@ fn benchmark_monoid( helper : &Helper<UsizeMaxMonoidWeight>, impls: &Vec<ImplDes
 	if helper.print == Print {
 		println!( "Benchmarking {} unsigned-max queries on {} vertices",
 			helper.queries.len(), helper.num_vertices );
+		helper.print_query_type_dist();
 	}
 	
 	macro_rules! do_benchmark_monoid {
