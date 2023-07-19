@@ -109,6 +109,7 @@ use std::ops;
 use nonmax::NonMaxUsize;
 
 pub mod common;
+pub mod connectivity;
 pub mod link_cut;
 pub mod mst;
 pub mod onecut;

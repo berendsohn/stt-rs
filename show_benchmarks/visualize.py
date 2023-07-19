@@ -129,8 +129,11 @@ class TitleFixedVal :
 		assert len( benchmarks ) > 0
 		vals = {self._val_func( benchmark ) for benchmark in benchmarks}
 		if len( vals ) > 1 :
-			print( f"WARNING: Multiple {self._val_name_plural}: {', '.join( sorted( vals ) )}")
-			return self._tpl.format( "?" )
+			print( f"WARNING: Multiple {self._val_name_plural}: {', '.join( sorted( map( str, vals ) ) )}")
+			v = next( iter( vals ) )
+			if not isinstance( v, (tuple, list) ) :
+				v = (v,)
+			return self._tpl.format( *(("?",) * len( v )) )
 		else :
 			v = next( iter( vals ) )
 			if not isinstance( v, (tuple, list) ) :
@@ -175,6 +178,8 @@ PROFILES = {
 	"mst-vertices" : ( XNumVerts( log_scale = True ), YMicrosPerEdge,
 			TitleFixedEdgeFactor( "Minimum Spanning forest (m/n = {})" ), lambda _ : True,
 			validate_edge_factor_constant, validate_edge_factor_int ),
+	"fd-con" : ( XNumVerts(), YMicrosPerQuery,
+			"Fully-dynamic connectivity (q=n²)", lambda _ : True, validate_queries_quadratic ),
 	"degenerate" : ( XNumVerts(), YMicrosPerVertex, "Degenerate queries", lambda _ : True ),
 	"degenerate-noisy" : ( XStdDev, YMillis, TitleFixedVertices( "Noisy degenerate queries (n = {})" ), lambda _ : True),
 	"queries-uniform" : ( XNumVerts( log_scale = False ),
