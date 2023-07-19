@@ -6,17 +6,18 @@ use rand::rngs::StdRng;
 use stt::{DynamicForest, generate};
 use stt::common::{EmptyGroupWeight, EmptyNodeData, IsizeAddGroupWeight, UsizeMaxMonoidWeight};
 use stt::generate::GeneratableMonoidWeight;
-use stt::link_cut::{GroupPathWeightLCTNodeData, LinkCutForest, MonoidPathWeightLCTNodeData};
+use stt::link_cut::{EmptyLinkCutTree, GroupLinkCutTree, MonoidLinkCutTree};
 use stt::pg::PetgraphDynamicForest;
 use stt::twocut::mtrtt::MoveToRootTT;
 use stt::twocut::node_data::{GroupPathWeightNodeData, MonoidPathWeightNodeData};
 use stt::twocut::splaytt::{GreedySplayTT, LocalTwoPassSplayTT, StableGreedySplayTT, StableLocalTwoPassSplayTT, StableTwoPassSplayTT, TwoPassSplayTT};
+
 use crate::util::DynamicTestForest;
 
 #[test]
 fn test() {
 	test_queries_for::<PetgraphDynamicForest<EmptyGroupWeight>>();
-	test_queries_for::<LinkCutForest<EmptyNodeData>>();
+	test_queries_for::<EmptyLinkCutTree>();
 	test_queries_for::<GreedySplayTT<EmptyNodeData>>();
 	test_queries_for::<StableGreedySplayTT<EmptyNodeData>>();
 	test_queries_for::<TwoPassSplayTT<EmptyNodeData>>();
@@ -26,8 +27,7 @@ fn test() {
 	test_queries_for::<MoveToRootTT<EmptyNodeData>>();
 	
 	test_queries_for::<PetgraphDynamicForest<IsizeAddGroupWeight>>();
-	test_queries_for::<LinkCutForest<GroupPathWeightLCTNodeData<IsizeAddGroupWeight>>>();
-	test_queries_for::<LinkCutForest<MonoidPathWeightLCTNodeData<IsizeAddGroupWeight>>>();
+	test_queries_for::<GroupLinkCutTree<IsizeAddGroupWeight>>();
 	test_queries_for::<GreedySplayTT<GroupPathWeightNodeData<IsizeAddGroupWeight>>>();
 	test_queries_for::<StableGreedySplayTT<GroupPathWeightNodeData<IsizeAddGroupWeight>>>();
 	test_queries_for::<TwoPassSplayTT<GroupPathWeightNodeData<IsizeAddGroupWeight>>>();
@@ -37,7 +37,7 @@ fn test() {
 	test_queries_for::<MoveToRootTT<GroupPathWeightNodeData<IsizeAddGroupWeight>>>();
 	
 	test_queries_for::<PetgraphDynamicForest<UsizeMaxMonoidWeight>>();
-	test_queries_for::<LinkCutForest<MonoidPathWeightLCTNodeData<UsizeMaxMonoidWeight>>>();
+	test_queries_for::<MonoidLinkCutTree<IsizeAddGroupWeight>>();
 	test_queries_for::<GreedySplayTT<MonoidPathWeightNodeData<UsizeMaxMonoidWeight>>>();
 	test_queries_for::<StableGreedySplayTT<MonoidPathWeightNodeData<UsizeMaxMonoidWeight>>>();
 	test_queries_for::<TwoPassSplayTT<MonoidPathWeightNodeData<UsizeMaxMonoidWeight>>>();

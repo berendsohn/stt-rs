@@ -1,3 +1,3 @@
 #!/bin/bash
 
-cargo test --features="generate petgraph"
+cargo test --features="generate petgraph" $@
