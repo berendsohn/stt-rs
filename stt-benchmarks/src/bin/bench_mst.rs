@@ -1,6 +1,11 @@
 use std::cmp::{max, min};
 use std::collections::{HashMap, HashSet};
-use std::io::{stdout, Write};
+use std::fs::File;
+use std::io;
+use std::io::{BufRead, stdout, Write};
+use std::num::ParseIntError;
+use std::path::PathBuf;
+use std::process::exit;
 use std::time::{Duration, Instant};
 
 use clap::Parser;
@@ -12,19 +17,19 @@ use petgraph::graph::UnGraph;
 use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
-use stt::mst::compute_mst;
 use stt::common::UsizeMaxMonoidWeightWithMaxEdge;
 use stt::DynamicForest;
 use stt::generate::generate_edge;
 use stt::link_cut::MonoidLinkCutTree;
+use stt::mst::compute_mst;
 use stt::onecut::SimpleDynamicTree;
 use stt::pg::PetgraphDynamicForest;
 use stt::twocut::mtrtt::*;
 use stt::twocut::splaytt::*;
 
-use stt_benchmarks::do_for_impl_monoid;
 use stt_benchmarks::bench_util::{ImplDesc, ImplName, PrintType};
 use stt_benchmarks::bench_util::PrintType::{Json, Print};
+use stt_benchmarks::do_for_impl_monoid;
 
 type MSTWeight = UsizeMaxMonoidWeightWithMaxEdge;
 type Edge = (usize, usize);
@@ -73,6 +78,50 @@ fn generate_sparse_edges_with_weights( num_vertices : usize, num_edges : usize, 
 		}
 	}
 	result
+}
+
+fn read_mst( path : &PathBuf ) -> io::Result<(usize, Vec<EdgeWithWeight>)> {
+	let file = File::open( path )?;
+	let mut num_vertices = 0;
+	let mut edges : Vec<EdgeWithWeight> = vec![];
+	for line in io::BufReader::new( file ).lines() {
+		let line = line?;
+		let parts : Vec<_> = line.split( " " ).collect();
+		if parts[0] == "mst" {
+			// "mst <num_vertices> <num_edges>"
+			if parts.len() == 3 {
+				if let Ok( n ) = parts[1].parse() {
+					// Ignore number of edges
+					num_vertices = n;
+					continue;
+				}
+			}
+			return Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid line: '{line}'" ) ) );
+		}
+		else if parts[0] == "e" {
+			// "e <from> <to> <weight>"
+
+			fn parse_edge( edge_parts : &Vec<&str>) -> Result<EdgeWithWeight, ParseIntError> {
+				let u = edge_parts[1].parse()?;
+				let v = edge_parts[2].parse()?;
+				let w = edge_parts[3].parse()?;
+				return Ok( (u,v,w) )
+			}
+			
+			if parts.len() == 4 {
+				if let Ok( e ) = parse_edge( &parts ) {
+					edges.push( e );
+					continue
+				}
+			}
+			return Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid line: '{line}'" ) ) );
+		}
+		else if parts[0] == "c" {}
+		else {
+			return Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid line: '{line}'" ) ) );
+		}
+	}
+	Ok( (num_vertices, edges) )
 }
 
 
@@ -189,13 +238,13 @@ struct CLI {
 	#[arg(short, long, default_value_t = 8)] // As in Tarjan, Werneck 2010
 	edge_factor : usize,
 	
-	/// Use complete graph (ignore --edge-factor)
+	/// Use complete graph (ignore -e)
 	#[arg(long, default_value_t = false)]
 	complete : bool,
 	
-	/// Number of times to repeat the benchmark
-	#[arg(short, long, default_value_t = 1)]
-	tests : usize,
+	/// Read input graph from the given file (ignore -n, -e, --complete)
+	#[arg(short, long, required = false)]
+	input : Option<PathBuf>,
 	
 	/// Verify the results of each benchmark
 	#[arg(long, default_value_t = false)]
@@ -222,12 +271,6 @@ struct CLI {
 fn main() {
 	let cli = CLI::parse();
 	
-	let num_vertices = cli.num_vertices;
-	let num_edges = num_vertices * cli.edge_factor;
-	let all_edges = cli.complete;
-	let num_tests = cli.tests;
-	let seed = cli.seed;
-	
 	let print = PrintType::from_args( cli.print, cli.json );
 	
 	let impls : Vec<ImplDesc>;
@@ -238,39 +281,57 @@ fn main() {
 		impls = ImplDesc::all()
 	}
 
-	let mut rng = StdRng::seed_from_u64( seed );
-
-	if cli.print {
-		if all_edges {
-			println!( "Testing with complete graph on {num_vertices} vertices. Seed: {seed}." );
+	let num_vertices : usize;
+	let input_edges : Vec<EdgeWithWeight>;
+	
+	// Read edges
+	if let Some( input_path ) = &cli.input {
+		if cli.print {
+			println!( "Reading edges from '{}'", input_path.display() );
 		}
-		else {
-			println!( "Testing with sparse random graph on {num_vertices} vertices, with {num_edges} edges. Seed: {seed}." );
+		match read_mst( input_path ) {
+			Ok( ( n, e ) ) => { num_vertices = n; input_edges = e },
+			Err( e ) => {
+				println!( "Could not read file '{}': {}", input_path.display(), e );
+				exit( 1 );
+			}
+		}
+		
+		if cli.print {
+			println!( " Done reading {} edges on {num_vertices} vertices.", input_edges.len() );
 		}
 	}
-
-	for test_idx in 0..num_tests {
+	else {
+		let mut rng = StdRng::seed_from_u64( cli.seed );
+		num_vertices = cli.num_vertices;
+		let num_edges = num_vertices * cli.edge_factor;
+		let all_edges = cli.complete;
+		
 		// Generate edges
-		if cli.print {
-			print!( "#{test_idx}: Generating edges..." );
-		}
-		stdout().flush().expect( "Couldn't flush for some reason" );
-		let input_edges : Vec<EdgeWithWeight> = if all_edges {
-			generate_complete_edges_with_weights( num_vertices, &mut rng )
+		if all_edges {
+			if cli.print {
+				println!( "Generating complete graph on {num_vertices} vertices. Seed: {}.", cli.seed );
+				stdout().flush().expect( "Couldn't flush for some reason" );
+			}
+			input_edges = generate_complete_edges_with_weights( num_vertices, &mut rng );
 		}
 		else {
-			generate_sparse_edges_with_weights( num_vertices, num_edges, &mut rng )
-		};
+			if cli.print {
+				println!( "Generating sparse random graph on {num_vertices} vertices, with {num_edges} edges. Seed: {}.", cli.seed );
+				stdout().flush().expect( "Couldn't flush for some reason" );
+			}
+			input_edges = generate_sparse_edges_with_weights( num_vertices, num_edges, &mut rng );
+		}
 		
 		if cli.print {
 			println!( " Done." );
 		}
-		
-		let mut helper = Helper::new( num_vertices, input_edges, cli.verify, print );
-		
-		helper.mst_petgraph( true );
-		for imp in &impls {
-			benchmark( *imp, &mut helper );
-		}
+	}
+	
+	let mut helper = Helper::new( num_vertices, input_edges, cli.verify, print );
+	
+	helper.mst_petgraph( true );
+	for imp in &impls {
+		benchmark( *imp, &mut helper );
 	}
 }
