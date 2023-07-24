@@ -131,11 +131,16 @@ impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> LinkCutForest
 		}
 	}
 	
+	/// Checks whether `v` is a left or right child of `p`, assuming `p` is its parent
+	fn is_non_middle_child_hint( &self, v : NodeIdx, p : NodeIdx ) -> bool {
+		self.node( p ).left_child == Some( v ) || self.node( p ).right_child == Some( v )
+	}
+	
 	/// Checks whether `v` is a left or right child, i.e., whether `v` has a parent and a solid edge
 	/// to that parent.
 	fn is_non_middle_child( &self, v : NodeIdx ) -> bool {
 		if let Some( p ) = self.node( v ).parent {
-			self.node( p ).left_child == Some( v ) || self.node( p ).right_child == Some( v )
+			self.is_non_middle_child_hint( v, p )
 		}
 		else {
 			false
@@ -174,9 +179,9 @@ impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> LinkCutForest
 			"{:?} does not contain {:?}", [self.node( p ).left_child, self.node( p ).right_child], &Some( v ) );
 		
 		// Update parent of v
-		let g = self.node( p ).parent;
-		self.node_mut( v ).parent = g;
-		if let Some( g ) = g {
+		let g_opt = self.node( p ).parent;
+		self.node_mut( v ).parent = g_opt;
+		if let Some( g ) = g_opt {
 			self.push_reverse_bit( g );
 			if self.node( g ).left_child == Some( p ) {
 				self.node_mut( g ).left_child = Some( v );
@@ -217,59 +222,68 @@ impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> LinkCutForest
 		if VERIFY { self._verify() }
 	}
 	
-	/// Perform a single splay step, moving `v` up to two rotations towards the top.
-	fn splay_step( &mut self, v : NodeIdx ) {
-		if LOG_VERBOSE { println!( "splay_step({v})" ); }
-		if self.is_non_middle_child( v ) {
-			let p = self.node( v ).parent.unwrap();
-			if self.is_non_middle_child( p ) {
-				let g = self.node( p ).parent.unwrap();
-				self.push_reverse_bit( g );
-				self.push_reverse_bit( p );
-				
-				if self.is_left_child( v ) {
-					let p = self.node( v ).parent.unwrap();
-					if self.is_left_child( p ) {
-						self.rotate( p );
-						self.rotate( v );
+	fn get_parent_if_non_middle_child( &self, v : NodeIdx ) -> Option<NodeIdx> {
+		if let Some( p ) = self.get_parent( v ) {
+			if self.is_non_middle_child_hint( v, p ) {
+				return Some( p )
+			}
+		}
+		None
+	}
+	
+	/// Splay `v` to the top of its solid subtree. Returns its parent afterwards, if it exists.
+	fn splay_solid( &mut self, v : NodeIdx ) -> Option<NodeIdx> {
+		if LOG_VERBOSE { println!( "splay_solid({v})" ); }
+		loop {
+			if let Some( p ) = self.get_parent( v ) {
+				if self.is_non_middle_child_hint( v, p ) {
+					if let Some( g ) = self.get_parent_if_non_middle_child( p ) {
+						self.push_reverse_bit( g );
+						self.push_reverse_bit( p );
+						
+						if self.node( p ).left_child == Some( v ) {
+							if self.node( g ).left_child == Some( p ) {
+								self.rotate( p );
+								self.rotate( v );
+							}
+							else {
+								debug_assert!( self.is_right_child( p ) );
+								self.rotate( v );
+								self.rotate( v );
+							}
+						}
+						else if self.node( p ).right_child == Some( v ) {
+							if self.node( g ).right_child == Some( p ) {
+								self.rotate( p );
+								self.rotate( v );
+							}
+							else {
+								debug_assert!( self.is_left_child( p ) );
+								self.rotate( v );
+								self.rotate( v );
+							}
+						}
 					}
 					else {
-						debug_assert!( self.is_right_child( p ) );
-						self.rotate( v );
+						// p is root or middle child
 						self.rotate( v );
 					}
 				}
-				else if self.is_right_child( v ) {
-					let p = self.node( v ).parent.unwrap();
-					if self.is_right_child( p ) {
-						self.rotate( p );
-						self.rotate( v );
-					}
-					else {
-						debug_assert!( self.is_left_child( p ) );
-						self.rotate( v );
-						self.rotate( v );
-					}
+				else {
+					return Some( p )
 				}
 			}
 			else {
-				// p is root or middle child
-				self.rotate( v );
+				return None
 			}
 		}
-		// Otherwise, v is the root, so nothing to do.
+		// Now v is a solid root
 	}
 	
-	/// Splay `v` to the top of its solid subtree
-	fn splay_solid( &mut self, v : NodeIdx ) {
-		if LOG_VERBOSE { println!( "splay_solid({v})" ); }
-		while self.is_non_middle_child( v ) {
-			self.splay_step( v );
-		}
-	}
-	
-	/// Make `v` the left child of its parent, if it has a parent, or does nothing otherwise
-	fn try_splice( &mut self, v : NodeIdx ) {
+	/// Make `v` the left child of its parent, if it has a parent, or does nothing otherwise.
+	/// 
+	/// Returns the parent of `v`
+	fn try_splice( &mut self, v : NodeIdx ) -> Option<NodeIdx> {
 		if let Some( p ) = self.node( v ).parent {
 			if LOG_VERBOSE { println!( "splice({v})" ); }
 			self.push_reverse_bit( p );
@@ -277,6 +291,10 @@ impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> LinkCutForest
 			self.node_mut( p ).right_child = Some( v );
 			if LOG_VERBOSE { println!( "{}", self.to_string() ); }
 			if VERIFY { self._verify() }
+			Some( p )
+		}
+		else {
+			None
 		}
 	}
 	
@@ -286,15 +304,13 @@ impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> LinkCutForest
 		// Splay in solid subtrees
 		let mut x_opt = Some( v );
 		while let Some( x ) = x_opt {
-			self.splay_solid( x );
-			x_opt = self.node( x ).parent;
+			x_opt = self.splay_solid( x );
 		}
 		
 		// Splice
 		let mut x_opt = Some( v );
 		while let Some( x ) = x_opt {
-			self.try_splice( x );
-			x_opt = self.node( x ).parent;
+			x_opt = self.try_splice( x );
 		}
 		
 		// Splay a last time
@@ -459,6 +475,14 @@ impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> LinkCutForest
 			self._print_subtree(out, *c, children_map, format!( "{}{}", child_indent, indent_symbol ).as_str() );
 		}
 	}
+	
+	/// Returns the parent of `v` in the underlying (rooted) tree.
+	/// 
+	/// May return any neighbor of `v` if the underlying tree is not rooted.
+	pub fn get_underlying_parent( &mut self, v : NodeIdx ) -> Option<NodeIdx> {
+		self.node_to_root( v );
+		self.node( v ).left_child
+	}
 }
 
 impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> RootedForest for LinkCutForest<TNodeData, IMPL_EVERT> {
@@ -490,9 +514,9 @@ impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> DynamicForest
 		if LOG_VERBOSE { println!( "LINK({u}, {v}, {weight})" ); }
 		self.node_to_root( u );
 		self.node_to_root( v );
-		assert!( self.node( u ).parent.is_none(), "Apparently attempting to link nodes in the same component" );
 		
 		self.evert( u );
+		debug_assert!( self.node( v ).parent.is_none(), "Apparently attempting to link nodes in the same component" );
 		self.node_mut( u ).parent = Some( v );
 		
 		TNodeData::after_attached( self, u, weight );
@@ -525,7 +549,7 @@ impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> DynamicForest
 		self.node_to_root( u );
 		self.node_to_root( v );
 		
-		// Compute path from u to root. Use the fact that u has weight at most 3, and is in the left or right spine of the root solid subtree
+		// Compute path from u to root. Use the fact that u has depth at most 3, and is in the left or right spine of the root solid subtree
 		let mut w = TNodeData::TWeight::identity();
 		let mut x = u;
 		while let Some( p ) = self.node( x ).parent {

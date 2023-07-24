@@ -63,20 +63,41 @@ pub trait STTStructureRead : RootedForest {
 		return self.is_direct_separator( v ) || self.is_indirect_separator( v );
 	}
 
+	/// Indicate whether `v` is a 2-cut node.
+	/// 
+	/// `p` must be the parent of `v`
+	fn is_separator_hint( &self, v : NodeIdx, p : NodeIdx ) -> bool {
+		return self.is_direct_separator_hint( v, p ) || self.is_indirect_separator_hint( v, p );
+	}
+
 	/// Indicate whether `v` is a 2-cut node and the grandparent of `v` is in its boundary.
 	fn is_direct_separator( &self, v : NodeIdx ) -> bool {
 		match self.get_parent( v ) {
-			Some( p ) => self.get_direct_separator_child( p ) == Some( v ),
+			Some( p ) => self.is_direct_separator_hint( v, p ),
 			None => false
 		}
+	}
+	
+	/// Indicate whether `v` is a 2-cut node and the grandparent of `v` is in its boundary.
+	/// 
+	/// `p` must be the parent of `v`
+	fn is_direct_separator_hint( &self, v : NodeIdx, p : NodeIdx ) -> bool {
+		self.get_direct_separator_child( p ) == Some( v )
 	}
 
 	/// Indicate whether `v` is a 2-cut node and the grandparent of `v` is not in its boundary.
 	fn is_indirect_separator( &self, v : NodeIdx ) -> bool {
 		match self.get_parent( v ) {
-			Some( p ) => self.get_indirect_separator_child( p ) == Some( v ),
+			Some( p ) => self.is_indirect_separator_hint( v, p ),
 			None => false
 		}
+	}
+
+	/// Indicate whether `v` is a 2-cut node and the grandparent of `v` is not in its boundary.
+	/// 
+	/// `p` must be the parent of `v`
+	fn is_indirect_separator_hint( &self, v : NodeIdx, p : NodeIdx ) -> bool {
+		self.get_indirect_separator_child( p ) == Some( v )
 	}
 }
 
@@ -88,10 +109,17 @@ pub trait STTRotate : STTStructureRead {
 	/// maintain the 2-cut property).
 	fn rotate( &mut self, v : NodeIdx );
 
-	/// Whether a rotation is allowed for this node
+	/// Whether we can rotate at `v`.
+	/// 
+	/// `p` must be the parent of `v`
+	fn can_rotate_hint( &self, v : NodeIdx, p : NodeIdx ) -> bool {
+		self.is_separator_hint( v, p ) || ! self.is_separator( p )
+	}
+	
+	/// Whether we can rotate at `v`.
 	fn can_rotate( &self, v : NodeIdx ) -> bool {
 		if let Some( p ) = self.get_parent( v ) {
-			self.is_separator( v ) || ! self.is_separator( p )
+			self.can_rotate_hint( v, p )
 		}
 		else {
 			false
@@ -133,6 +161,7 @@ impl<TData : NodeData> STTStructureRead for STT<TData> {
 }
 
 impl<TData : NodeData> STTRotate for STT<TData> {
+	#[inline]
 	fn rotate( &mut self, v : NodeIdx ) {
 		// println!( "Rotating {v}" );
 
@@ -140,8 +169,7 @@ impl<TData : NodeData> STTRotate for STT<TData> {
 		let p= self.node( v ).parent.unwrap();
 
 		debug_assert!( self.is_separator( v ) || ! self.is_separator( p ) );
-		let p_was_sep = self.is_separator( p );
-
+		
 		// Get (possibly) other relevant nodes
 		let gp_p = self.node( p ).parent;
 		let c_p = self.node( v ).dsep_child;
@@ -154,7 +182,9 @@ impl<TData : NodeData> STTRotate for STT<TData> {
 		}
 
 		// Change separator information for children of gp
+		let p_was_sep : bool;
 		if let Some( gp ) = gp_p {
+			p_was_sep = self.is_separator_hint( p, gp );
 			// v is now the root of the tree formerly rooted at p
 			if self.node( gp ).dsep_child == Some( p ) {
 				self.node_mut( gp ).dsep_child = Some( v );
@@ -162,6 +192,9 @@ impl<TData : NodeData> STTRotate for STT<TData> {
 			else if self.node( gp ).isep_child == Some( p ) {
 				self.node_mut( gp ).isep_child = Some( v );
 			}
+		}
+		else {
+			p_was_sep = false;
 		}
 
 		// Change separator information for children of p
@@ -328,6 +361,11 @@ impl<TData : NodeData> STT<TData> {
 
 	fn node_mut( &mut self, idx : NodeIdx ) -> &mut Node<TData> {
 		&mut self.nodes[idx.index()]
+	}
+	
+	/// The number of nodes in this forest.
+	pub fn num_nodes( &self ) -> usize {
+		self.nodes.len()
 	}
 }
 
