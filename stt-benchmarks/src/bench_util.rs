@@ -44,7 +44,8 @@ pub fn transform_into_queries<TWeight : MonoidWeight, TRng : Rng>(
 	num_nodes : usize,
 	node_pairs : impl Iterator<Item=(NodeIdx, NodeIdx)>,
 	rng : &mut TRng,
-	weight_gen : impl Fn( &mut TRng ) -> TWeight )
+	weight_gen : impl Fn( &mut TRng ) -> TWeight,
+	weight_query_prob : f64 )
 	-> Vec<Query<TWeight>>
 {
 	let mut f = MonoidTwoPassSplayTT::<MonoidWeightWithMaxEdge<EmptyGroupWeight>>::new( num_nodes );
@@ -52,7 +53,7 @@ pub fn transform_into_queries<TWeight : MonoidWeight, TRng : Rng>(
 	node_pairs.map( |(u, v)| {
 		if let Some( w ) = f.compute_path_weight(u, v) {
 			let (x, y) = w.unwrap_edge();
-			if rng.gen_bool( 0.5 ) {
+			if rng.gen_bool( weight_query_prob ) {
 				PathWeight(u, v)
 			}
 			else {
@@ -70,22 +71,22 @@ pub fn transform_into_queries<TWeight : MonoidWeight, TRng : Rng>(
 
 /// Generates a sequence of queries that can be handled when starting with an empty tree.
 pub fn generate_queries<TWeight : MonoidWeight, TRng : Rng>( num_vertices : usize, num_queries : usize,
-	rng : &mut TRng, weight_gen : impl Fn( &mut TRng ) -> TWeight ) -> Vec<Query<TWeight>>
+	rng : &mut TRng, weight_gen : impl Fn( &mut TRng ) -> TWeight, weight_query_prob : f64 ) -> Vec<Query<TWeight>>
 {
 	let node_pairs : Vec<_> = (0..num_queries)
 		.map( |_| generate_edge( num_vertices, rng ) )
 		.map( |(u, v)| ( NodeIdx::new( u ), NodeIdx::new( v ) ) )
 		.collect();
-	transform_into_queries( num_vertices, node_pairs.into_iter(), rng, weight_gen )
+	transform_into_queries( num_vertices, node_pairs.into_iter(), rng,
+			weight_gen, weight_query_prob )
 }
 
 
 /// Generate queries using [GeneratableMonoidWeight::generate]
-pub fn generate_queries_default<TWeight : GeneratableMonoidWeight>(
-	num_vertices : usize, num_queries : usize,
-	rng : &mut impl Rng ) -> Vec<Query<TWeight>>
+pub fn generate_queries_default<TWeight : GeneratableMonoidWeight>( num_vertices : usize,
+		num_queries : usize, rng : &mut impl Rng, weight_query_prob : f64 ) -> Vec<Query<TWeight>>
 {
-	generate_queries( num_vertices, num_queries, rng, TWeight::generate )
+	generate_queries( num_vertices, num_queries, rng, TWeight::generate, weight_query_prob )
 }
 
 
@@ -95,13 +96,15 @@ pub fn generate_queries_with_node_dist<TWeight : MonoidWeight, TRng : Rng>(
 	num_queries : usize,
 	rng : &mut TRng,
 	weight_gen : impl Fn( &mut TRng ) -> TWeight,
+	weight_query_prob : f64,
 	node_dist : &impl Distribution<usize> ) -> Vec<Query<TWeight>>
 {
 	let node_pairs : Vec<_> = (0..num_queries)
 		.map( |_| generate_edge_with_dist( node_dist, rng ) )
 		.map( |(u, v)| ( NodeIdx::new( u ), NodeIdx::new( v ) ) )
 		.collect();
-	transform_into_queries( num_nodes, node_pairs.into_iter(), rng, weight_gen )
+	transform_into_queries( num_nodes, node_pairs.into_iter(), rng, weight_gen,
+			weight_query_prob )
 }
 
 

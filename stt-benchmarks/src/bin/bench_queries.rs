@@ -45,6 +45,7 @@ struct Helper<TWeight>
 	num_vertices : usize,
 	queries : Vec<Query<TWeight>>,
 	seed : u64,
+	weight_query_prob : f64,
 	print : PrintType
 }
 
@@ -52,7 +53,7 @@ impl<TWeight> Helper<TWeight>
 	where TWeight : GeneratableMonoidWeight
 {
 	fn new( num_nodes: usize, num_queries : usize, seed : u64, print : PrintType,
-		   node_dist : NodeDistribution ) -> Helper<TWeight>
+		   node_dist : NodeDistribution, weight_query_prob : f64 ) -> Helper<TWeight>
 	{
 		if print == Print {
 			print!( "Generating queries with {node_dist} distribution..." );
@@ -62,10 +63,10 @@ impl<TWeight> Helper<TWeight>
 		let mut rng = StdRng::seed_from_u64( seed );
 		let queries =  match node_dist {
 			NodeDistribution::Uniform => bench_util::generate_queries_with_node_dist(
-				num_nodes, num_queries, &mut rng, TWeight::generate, 
+				num_nodes, num_queries, &mut rng, TWeight::generate, weight_query_prob, 
 				&distributions::Uniform::new( 0, num_nodes ) ),
 			NodeDistribution::Geometric => bench_util::generate_queries_with_node_dist(
-				num_nodes, num_queries, &mut rng, TWeight::generate, 
+				num_nodes, num_queries, &mut rng, TWeight::generate, weight_query_prob,
 				&distributions::WeightedIndex::new( 
 					(0..num_nodes).map( |i| (1.-GEOM_P).pow( i as f64 ) ) )
 					.expect( "Couldn't create distribution" ) )
@@ -75,7 +76,7 @@ impl<TWeight> Helper<TWeight>
 			println!( " Done." );
 		}
 		
-		Helper{ num_vertices: num_nodes, queries, seed, print }
+		Helper{ num_vertices: num_nodes, queries, seed, weight_query_prob, print }
 	}
 	
 	fn benchmark<TDynForest>( &self, impl_name : &str )
@@ -91,6 +92,7 @@ impl<TWeight> Helper<TWeight>
 				name : impl_name,
 				num_vertices : self.num_vertices,
 				num_queries : self.queries.len(),
+				path_query_prob : self.weight_query_prob,
 				seed : self.seed,
 				time_ns : usize::try_from( duration.as_nanos() )
 					.expect( format!( "Duration too long: {}", duration.as_nanos() ).as_str() )
@@ -214,6 +216,11 @@ struct CLI {
 	#[arg(short='q', long)]
 	num_queries : Option<usize>,
 	
+	/// Probability of generating a path_weight query (instead of a cut) when querying two nodes in
+	/// the same tree.
+	#[arg(short='p', long, default_value_t = 0.5)]
+	path_query_prob : f64,
+	
 	/// Node distribution to generate queries
 	#[arg(short, long, default_value_t = NodeDistribution::Uniform)]
 	dist : NodeDistribution,
@@ -230,7 +237,7 @@ struct CLI {
 	#[arg(short, long, default_value_t = 0)]
 	seed : u64,
 	
-	// What weights to use in the benchmark.
+	/// What weights to use in the benchmark.
 	#[arg(short, long, default_value_t = WeightType::Empty)]
 	weight : WeightType,
 	
@@ -259,8 +266,11 @@ fn main() {
 	}
 	
 	match cli.weight {
-		WeightType::Empty => benchmark_empty( &Helper::new( cli.num_vertices, num_queries, cli.seed, print, cli.dist ), &impls ),
-		WeightType::Group => benchmark_group( &Helper::new( cli.num_vertices, num_queries, cli.seed, print, cli.dist ), &impls ),
-		WeightType::Monoid => benchmark_monoid( &Helper::new( cli.num_vertices, num_queries, cli.seed, print, cli.dist ), &impls )
+		WeightType::Empty => benchmark_empty( &Helper::new( cli.num_vertices,
+				num_queries, cli.seed, print, cli.dist, cli.path_query_prob ), &impls ),
+		WeightType::Group => benchmark_group( &Helper::new( cli.num_vertices,
+			num_queries, cli.seed, print, cli.dist, cli.path_query_prob ), &impls ),
+		WeightType::Monoid => benchmark_monoid( &Helper::new( cli.num_vertices,
+			num_queries, cli.seed, print, cli.dist, cli.path_query_prob ), &impls )
 	}
 }

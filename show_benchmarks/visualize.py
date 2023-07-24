@@ -86,6 +86,7 @@ class XSimple :
 
 XStdDev = XSimple( "σ", "std_dev" )
 XNumGroups = XSimple( "#groups", "num_groups" )
+XPathProb = XSimple( "p", "path_query_prob")
 
 def XNumVerts( log_scale : bool = False ) -> XSimple :
 	return XSimple( "n", "num_vertices", log_scale )
@@ -184,6 +185,9 @@ PROFILES = {
 	"degenerate-noisy" : ( XStdDev, YMillis, TitleFixedVertices( "Noisy degenerate queries (n = {})" ), lambda _ : True),
 	"queries-uniform" : ( XNumVerts( log_scale = False ),
 			YMicrosPerQuery, TitleFixedQueryFactor( "Uniform random queries (q/n = {})" ), lambda _ : True ),
+	"queries-path-prob" : ( XPathProb, YMicrosPerQuery,
+			TitleFixedVal( "Random queries (n = {}, q = {})", lambda b : ( b["num_vertices"], b["num_queries"] ), "vertices/queries" ),
+			lambda _ : True ),
 	"cache" : ( XNumGroups, YMicrosPerQuery,
 			TitleFixedGroupSizesAndQueries( "Cache (n/group = {}, q/group = {})" ), lambda _ : True )
 }
@@ -222,11 +226,15 @@ def main() :
 		print( f"ERROR: Unknown profile '{args.profile}'" )
 		sys.exit( -1 )
 	
-	with open( args.input_file, "r" ) as fp :
-		benchmarks = [
-			b for line in fp for b in load_benchmarks( line )
-			if include_func( b["name"] ) and b["name"] not in ( args.exclude or () )
-		]
+	try :
+		with open( args.input_file, "r" ) as fp :
+			benchmarks = [
+				b for line in fp for b in load_benchmarks( line )
+				if include_func( b["name"] ) and b["name"] not in (args.exclude or ())
+			]
+	except OSError as e :
+		sys.stderr.write( f"Could not open file '{args.input_file}': {e}\n" )
+		sys.exit( 1 )
 	
 	if len( benchmarks ) == 0 :
 		print( "No valid benchmarks found" )
