@@ -113,6 +113,7 @@ pub mod connectivity;
 pub mod link_cut;
 pub mod mst;
 pub mod onecut;
+pub mod rooted;
 pub mod twocut;
 
 #[cfg( feature = "generate" )]
@@ -196,7 +197,7 @@ pub trait NodeData : Clone + Display {
 	type TWeight : MonoidWeight;
 	
 	/// Create a default instance, to be used on newly created nodes.
-	fn new() -> Self;
+	fn new( v : NodeIdx ) -> Self;
 }
 
 /// Node data that knows the weight of the path to the associated node's parent.

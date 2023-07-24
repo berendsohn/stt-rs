@@ -10,6 +10,7 @@ pub mod basic;
 pub mod node_data;
 pub mod splaytt;
 pub mod mtrtt;
+pub mod rooted;
 
 
 /// Node data that includes associated methods to update itself when the tree is modified.

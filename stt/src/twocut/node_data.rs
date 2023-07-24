@@ -30,7 +30,7 @@ impl<TWeight : MonoidWeight> Display for MonoidPathWeightNodeData<TWeight> {
 impl<TWeight : MonoidWeight> NodeData for MonoidPathWeightNodeData<TWeight> {
 	type TWeight = TWeight;
 	
-	fn new() -> Self {
+	fn new( _ : NodeIdx ) -> Self {
 		MonoidPathWeightNodeData { pdist : Infinite, adist : Infinite }
 	}
 }
@@ -103,7 +103,7 @@ impl<TWeight : GroupWeight> Display for GroupPathWeightNodeData<TWeight> {
 impl<TWeight : GroupWeight> NodeData for GroupPathWeightNodeData<TWeight> {
 	type TWeight = TWeight;
 	
-	fn new() -> Self {
+	fn new( _ : NodeIdx ) -> Self {
 		GroupPathWeightNodeData { pdist : Infinite }
 	}
 }

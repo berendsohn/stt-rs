@@ -19,10 +19,10 @@ use std::fmt::{Display, Formatter};
 use std::iter::Map;
 use std::ops::Range;
 
-use crate::{RootedForest, DynamicForest, MonoidWeight, NodeData, NodeDataAccess, NodeIdx, PathWeightNodeData};
+use crate::{DynamicForest, MonoidWeight, NodeData, NodeDataAccess, NodeIdx, PathWeightNodeData, RootedForest};
 use crate::common::{EmptyNodeData, GroupWeight, WeightOrInfinity};
 use crate::common::WeightOrInfinity::{Finite, Infinite};
-
+use crate::rooted::RootedDynamicForest;
 
 /// Enable or disable logging
 const LOG_VERBOSE : bool = cfg!( feature = "verbose_lc" );
@@ -32,42 +32,45 @@ const VERIFY : bool = cfg!( feature = "verify_lc" );
 
 
 /// Link-cut tree without edge weights
-pub type EmptyLinkCutTree = LinkCutForest<EmptyNodeData>;
+pub type EmptyLinkCutTree = LinkCutForest<EmptyNodeData, true>;
 
 /// Link-cut tree with the given edge weights, which must form a group.
-pub type GroupLinkCutTree<TWeight> = LinkCutForest<GroupPathWeightLCTNodeData<TWeight>>;
+pub type GroupLinkCutTree<TWeight> = LinkCutForest<GroupPathWeightLCTNodeData<TWeight>, true>;
 
 /// Link-cut tree with the given edge weights.
-pub type MonoidLinkCutTree<TWeight> = LinkCutForest<MonoidPathWeightLCTNodeData<TWeight>>;
+pub type MonoidLinkCutTree<TWeight> = LinkCutForest<MonoidPathWeightLCTNodeData<TWeight>, true>;
+
+/// Link-cut tree that maintains a rooted forest without edge weights
+pub type RootedLinkCutTree = LinkCutForest<EmptyNodeData, false>;
 
 
 /// Node data for link-cut trees.
 /// 
 /// Must define associated functions to update node data after operations.
-pub trait LCTNodeData : PathWeightNodeData {
+pub trait LCTNodeData<const IMPL_EVERT : bool> : PathWeightNodeData {
 	/// Called before rotating v with its (solid) parent.
-	fn before_rotation(f : &mut LinkCutForest<Self>, v : NodeIdx );
+	fn before_rotation(f : &mut LinkCutForest<Self, IMPL_EVERT>, v : NodeIdx );
 	
 	/// Called before splicing v to its parent.
-	fn before_splice(f : &mut LinkCutForest<Self>, v : NodeIdx );
+	fn before_splice(f : &mut LinkCutForest<Self, IMPL_EVERT>, v : NodeIdx );
 
 	/// Called after adding an edge from v to another node (now its parent), with the given edge weight.
-	fn after_attached(f : &mut LinkCutForest<Self>, v : NodeIdx, weight : Self::TWeight );
+	fn after_attached(f : &mut LinkCutForest<Self, IMPL_EVERT>, v : NodeIdx, weight : Self::TWeight );
 
 	/// Called before removing the edge between v and its parent.
-	fn before_detached(f : &mut LinkCutForest<Self>, v : NodeIdx );
+	fn before_detached(f : &mut LinkCutForest<Self, IMPL_EVERT>, v : NodeIdx );
 }
 
 
 /// Standard implementation for empty node data.
-impl LCTNodeData for EmptyNodeData {
-	fn before_rotation(_ : &mut LinkCutForest<Self>, _ : NodeIdx ) {}
+impl<const IMPL_EVERT : bool> LCTNodeData<IMPL_EVERT> for EmptyNodeData {
+	fn before_rotation(_ : &mut LinkCutForest<Self, IMPL_EVERT>, _ : NodeIdx ) {}
 	
-	fn before_splice(_ : &mut LinkCutForest<Self>, _ : NodeIdx ) {}
+	fn before_splice(_ : &mut LinkCutForest<Self, IMPL_EVERT>, _ : NodeIdx ) {}
 	
-	fn after_attached(_ : &mut LinkCutForest<Self>, _ : NodeIdx, _ : Self::TWeight ) {}
+	fn after_attached(_ : &mut LinkCutForest<Self, IMPL_EVERT>, _ : NodeIdx, _ : Self::TWeight ) {}
 	
-	fn before_detached(_ : &mut LinkCutForest<Self>, _ : NodeIdx ) {}
+	fn before_detached(_ : &mut LinkCutForest<Self, IMPL_EVERT>, _ : NodeIdx ) {}
 }
 
 
@@ -82,19 +85,19 @@ struct Node<TNodeData : NodeData> {
 }
 
 impl<TNodeData : NodeData> Node<TNodeData> {
-	fn new() -> Node<TNodeData> {
-		Node{ parent : None, left_child : None, right_child : None, reversed : false, data : TNodeData::new() }
+	fn new( v : NodeIdx ) -> Node<TNodeData> {
+		Node{ parent : None, left_child : None, right_child : None, reversed : false, data : TNodeData::new( v ) }
 	}
 }
 
 
 /// A forest of link-cut-trees.
 #[derive(Clone)]
-pub struct LinkCutForest<TNodeData : LCTNodeData> {
+pub struct LinkCutForest<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> {
 	nodes : Vec<Node<TNodeData>>
 }
 
-impl<TNodeData : LCTNodeData> LinkCutForest<TNodeData> {
+impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> LinkCutForest<TNodeData, IMPL_EVERT> {
 	fn node( &self, v : NodeIdx ) -> &Node<TNodeData> {
 		&self.nodes[v.index()]
 	}
@@ -105,11 +108,15 @@ impl<TNodeData : LCTNodeData> LinkCutForest<TNodeData> {
 	
 	/// Reverses the solid subtree rooted at `v`.
 	fn reverse( &mut self, v : NodeIdx ) {
+		debug_assert!( IMPL_EVERT );
 		self.node_mut( v ).reversed = !self.node( v ).reversed;
 	}
 	
 	/// Sets the reversed bit of `v` to false, but possibly changes the reversed bit of children.
 	fn push_reverse_bit( &mut self, v : NodeIdx ) {
+		if !IMPL_EVERT {
+			return
+		}
 		if self.node( v ).reversed {
 			let v_mut = self.node_mut( v );
 			v_mut.reversed = false;
@@ -298,6 +305,9 @@ impl<TNodeData : LCTNodeData> LinkCutForest<TNodeData> {
 	/// Pushes reverse bit until the reverse bit is not set on any node in the solid subtree
 	/// rooted at `v`.
 	fn subtree_remove_reverse_bit( &mut self, v : NodeIdx ) {
+		if !IMPL_EVERT {
+			return
+		}
 		self.push_reverse_bit( v );
 		if let Some( c ) = self.node( v ).left_child {
 			self.subtree_remove_reverse_bit( c );
@@ -356,6 +366,7 @@ impl<TNodeData : LCTNodeData> LinkCutForest<TNodeData> {
 	
 	/// Make v the root of the tree and make sure it has no left child
 	fn evert( &mut self, v : NodeIdx ) {
+		debug_assert!( IMPL_EVERT );
 		if LOG_VERBOSE { println!( "EVERT({v})" ); }
 		self.node_to_root( v );
 		if LOG_VERBOSE { println!( "{}", self.to_string() ); }
@@ -450,13 +461,13 @@ impl<TNodeData : LCTNodeData> LinkCutForest<TNodeData> {
 	}
 }
 
-impl<TNodeData : LCTNodeData> RootedForest for LinkCutForest<TNodeData> {
+impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> RootedForest for LinkCutForest<TNodeData, IMPL_EVERT> {
 	fn get_parent( &self, v: NodeIdx ) -> Option<NodeIdx> {
 		self.node( v ).parent
 	}
 }
 
-impl<TNodeData: LCTNodeData> NodeDataAccess<TNodeData> for LinkCutForest<TNodeData> {
+impl<TNodeData: LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> NodeDataAccess<TNodeData> for LinkCutForest<TNodeData, IMPL_EVERT> {
 	fn data( &self, idx : NodeIdx ) -> &TNodeData {
 		&self.node( idx ).data
 	}
@@ -466,13 +477,13 @@ impl<TNodeData: LCTNodeData> NodeDataAccess<TNodeData> for LinkCutForest<TNodeDa
 	}
 }
 
-impl<TNodeData : LCTNodeData> DynamicForest for LinkCutForest<TNodeData> {
+impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> DynamicForest for LinkCutForest<TNodeData, IMPL_EVERT> {
 	type TWeight = TNodeData::TWeight;
 	
 	type NodeIdxIterator = Map<Range<usize>, fn(usize) -> NodeIdx>;
 	
 	fn new( num_vertices : usize ) -> Self {
-		LinkCutForest { nodes : (0..num_vertices).map( |_| Node::new() ).collect() }
+		LinkCutForest { nodes : (0..num_vertices).map( |i| Node::new( NodeIdx::new( i ) ) ).collect() }
 	}
 	
 	fn link( &mut self, u : NodeIdx, v : NodeIdx, weight : TNodeData::TWeight ) {
@@ -562,7 +573,7 @@ pub struct MonoidPathWeightLCTNodeData<TWeight : MonoidWeight> {
 impl<TWeight: MonoidWeight> NodeData for MonoidPathWeightLCTNodeData<TWeight> {
 	type TWeight = TWeight;
 	
-	fn new() -> Self {
+	fn new( _ : NodeIdx ) -> Self {
 		MonoidPathWeightLCTNodeData { pdist : Infinite, adist : Infinite }
 	}
 }
@@ -579,8 +590,8 @@ impl<TWeight: MonoidWeight> PathWeightNodeData for MonoidPathWeightLCTNodeData<T
 	}
 }
 
-impl<TWeight : MonoidWeight> LCTNodeData for MonoidPathWeightLCTNodeData<TWeight> {
-	fn before_rotation(f: &mut LinkCutForest<Self>, v: NodeIdx ) {
+impl<TWeight : MonoidWeight> LCTNodeData<true> for MonoidPathWeightLCTNodeData<TWeight> {
+	fn before_rotation(f: &mut LinkCutForest<Self, true>, v: NodeIdx ) {
 		// Find parent and (possibly) grandparent
 		let p = f.node( v ).parent.unwrap();
 		
@@ -633,16 +644,16 @@ impl<TWeight : MonoidWeight> LCTNodeData for MonoidPathWeightLCTNodeData<TWeight
 		}
 	}
 	
-	fn before_splice(f : &mut LinkCutForest<Self>, v : NodeIdx ) {
+	fn before_splice(f : &mut LinkCutForest<Self, true>, v : NodeIdx ) {
 		debug_assert!( !f.is_non_middle_child( f.node( v ).parent.unwrap() ) );
 		// Under the above assumption, there is nothing to do
 	}
 	
-	fn after_attached(f : &mut LinkCutForest<Self>, v : NodeIdx, weight : Self::TWeight ) {
+	fn after_attached(f : &mut LinkCutForest<Self, true>, v : NodeIdx, weight : Self::TWeight ) {
 		f.data_mut( v ).pdist = Finite( weight );
 	}
 	
-	fn before_detached(f: &mut LinkCutForest<Self>, v: NodeIdx) {
+	fn before_detached(f: &mut LinkCutForest<Self, true>, v: NodeIdx) {
 		f.data_mut( v ).pdist = Infinite
 	}
 }
@@ -657,7 +668,7 @@ pub struct GroupPathWeightLCTNodeData<TWeight : GroupWeight> {
 impl<TWeight: GroupWeight> NodeData for GroupPathWeightLCTNodeData<TWeight> {
 	type TWeight = TWeight;
 	
-	fn new() -> Self {
+	fn new( _ : NodeIdx ) -> Self {
 		Self { pdist : Infinite }
 	}
 }
@@ -674,8 +685,8 @@ impl<TWeight: GroupWeight> PathWeightNodeData for GroupPathWeightLCTNodeData<TWe
 	}
 }
 
-impl<TWeight : GroupWeight> LCTNodeData for GroupPathWeightLCTNodeData<TWeight> {
-	fn before_rotation( f : &mut LinkCutForest<Self>, v : NodeIdx ) {
+impl<TWeight : GroupWeight> LCTNodeData<true> for GroupPathWeightLCTNodeData<TWeight> {
+	fn before_rotation( f : &mut LinkCutForest<Self, true>, v : NodeIdx ) {
 		// Find parent and (possibly) grandparent
 		let p = f.node( v ).parent.unwrap();
 		
@@ -718,16 +729,115 @@ impl<TWeight : GroupWeight> LCTNodeData for GroupPathWeightLCTNodeData<TWeight> 
 		}
 	}
 	
-	fn before_splice( _ : &mut LinkCutForest<Self>, _ : NodeIdx ) {
+	fn before_splice( _ : &mut LinkCutForest<Self, true>, _ : NodeIdx ) {
 		// Nothing to do
 	}
 	
-	fn after_attached( f : &mut LinkCutForest<Self>, v : NodeIdx, weight : Self::TWeight ) {
+	fn after_attached( f : &mut LinkCutForest<Self, true>, v : NodeIdx, weight : Self::TWeight ) {
 		f.data_mut( v ).pdist = Finite( weight );
 	}
 	
-	fn before_detached( f: &mut LinkCutForest<Self>, v: NodeIdx ) {
+	fn before_detached( f: &mut LinkCutForest<Self, true>, v: NodeIdx ) {
 		f.data_mut( v ).pdist = Infinite
+	}
+}
+
+
+impl RootedDynamicForest for LinkCutForest<EmptyNodeData, false> {
+	type NodeIdxIterator = Map<Range<usize>, fn(usize) -> NodeIdx>;
+	
+	fn new( num_vertices : usize ) -> Self {
+		LinkCutForest { nodes : (0..num_vertices).map( |i| Node::new( NodeIdx::new( i ) ) ).collect() }
+	}
+	
+	fn nodes( &self ) -> Self::NodeIdxIterator {
+		(0..self.nodes.len()).map( |i| NodeIdx::new( i ) )
+	}
+	
+	fn link( &mut self, u : NodeIdx, v : NodeIdx ) {
+		if LOG_VERBOSE { println!( "LINK({u}, {v})" ); }
+		self.node_to_root( u );
+		self.node_to_root( v );
+		assert!( self.node( u ).parent.is_none(), "Apparently attempting to link nodes in the same component" );
+		
+		self.node_mut( u ).parent = Some( v );
+		
+		if LOG_VERBOSE { println!( "{}", self.to_string() ) }
+	}
+	
+	fn cut( &mut self, v : NodeIdx ) {
+		if LOG_VERBOSE { println!( "CUT({v})" ); }
+		self.node_to_root( v );
+		
+		let underlying_parent = self.node( v ).left_child.unwrap(); // Error if v is the root
+		self.node_mut( v ).left_child = None;
+		self.node_mut( underlying_parent ).parent = None;
+	}
+	
+	fn cut_edge( &mut self, u : NodeIdx, v : NodeIdx ) {
+		if LOG_VERBOSE { println!( "CUT_EDGE({u}, {v})" ); }
+		self.node_to_root( u );
+		self.node_to_root( v );
+		assert!( self.node( u ).parent.is_some(), "Apparently attempting to cut nodes in different components" );
+		debug_assert!( self.node( u ).parent == Some( v ) );
+		
+		self.node_mut( u ).parent = None;
+		if self.node( v ).left_child == Some( u ) {
+			self.node_mut( v ).left_child = None;
+		}
+		else if self.node( v ).right_child == Some( u ) {
+			self.node_mut( v ).right_child = None;
+		}
+		
+		if LOG_VERBOSE { println!( "{}", self.to_string() ) }
+	}
+	
+	fn find_root( &mut self, v : NodeIdx ) -> NodeIdx {
+		self.node_to_root( v );
+		let mut r = v;
+		while let Some( x ) = self.node( r ).left_child {
+			r = x;
+		}
+		self.node_to_root( r ); // Only for amortized analysis
+		r
+	}
+	
+	fn lowest_common_ancestor( &mut self, u : NodeIdx, v : NodeIdx ) -> Option<NodeIdx> {
+		self.node_to_root( u );
+		
+		let mut last_solid_leaf = v; // Will be the lowest ancestor of v on the root path
+		let mut x = v; // Will be child of root (u) that is v or an ancestor of v
+		while let Some( p ) = self.get_parent( x ) {
+			if !self.is_non_middle_child( x ) {
+				// x is a middle child
+				last_solid_leaf = p
+			}
+			
+			if p != u {
+				x = p;
+			}
+			else {
+				break;
+			}
+		}
+		
+		if self.node( x ).parent.is_none() {
+			return None; // u and v are in different trees
+		}
+		
+		let lca;
+		if self.is_left_child( x ) {
+			// last_solid_leaf is to the left of u on the root path, i.e., above u in the underlying tree
+			lca = last_solid_leaf;
+		}
+		else {
+			// last_solid_leaf is u or to the right of u on the root path, i.e., below u in the underlying tree
+			lca = u;
+		}
+		
+		self.node_to_root( v ); // Only for amortized analysis
+		
+		Some( lca )
 	}
 }
 

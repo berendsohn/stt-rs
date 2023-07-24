@@ -13,12 +13,11 @@ use rand::distributions::Distribution;
 use stt::link_cut::{LCTNodeData, LinkCutForest};
 use stt::onecut::SimpleDynamicTree;
 use stt::pg::PetgraphDynamicForest;
-use stt::twocut::mtrtt::{MoveToRootTT, StableMoveToRootTT};
-use stt::twocut::splaytt::{GreedySplayTT, LocalTwoPassSplayTT, MonoidTwoPassSplayTT, StableGreedySplayTT, StableLocalTwoPassSplayTT, StableTwoPassSplayTT, TwoPassSplayTT};
+use stt::rooted::SimpleRootedForest;
+use stt::twocut::mtrtt::{MoveToRootTT, RootedMoveToRootTT, StableMoveToRootTT};
+use stt::twocut::splaytt::{GreedySplayTT, LocalTwoPassSplayTT, MonoidTwoPassSplayTT, RootedGreedySplayTT, RootedLocalTwoPassSplayTT, RootedTwoPassSplayTT, StableGreedySplayTT, StableLocalTwoPassSplayTT, StableTwoPassSplayTT, TwoPassSplayTT};
 use stt::twocut::UpdatingNodeData;
 use Query::*;
-
-use self::ImplDesc::*;
 
 /// A query to a dynamic forest
 pub enum Query<TWeight : MonoidWeight> {
@@ -219,10 +218,32 @@ pub enum ImplDesc {
 
 impl ImplDesc {
 	pub fn all() -> Vec<ImplDesc> {
-		vec![PetgraphDynamic, LinkCut, GreedySplay, StableGreedySplay, TwoPassSplay, StableTwoPassSplay,
-			LocalTwoPassSplay, LocalStableTwoPassSplay, MoveToRoot, StableMoveToRoot, OneCut]
+		vec![ImplDesc::PetgraphDynamic, ImplDesc::LinkCut, ImplDesc::GreedySplay,
+			ImplDesc::StableGreedySplay, ImplDesc::TwoPassSplay, ImplDesc::StableTwoPassSplay,
+			ImplDesc::LocalTwoPassSplay, ImplDesc::LocalStableTwoPassSplay, ImplDesc::MoveToRoot,
+			ImplDesc::StableMoveToRoot, ImplDesc::OneCut]
 	}
 }
+
+
+/// Enum listing possible rooted dynamic tree implementations, usable by CLAP.
+#[derive( Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum )]
+pub enum RootedImplDesc {
+	LinkCut,
+	GreedySplay,
+	TwoPassSplay,
+	LocalTwoPassSplay,
+	MoveToRoot,
+	Simple
+}
+
+impl RootedImplDesc {
+	pub fn all() -> Vec<RootedImplDesc> {
+		vec![RootedImplDesc::LinkCut, RootedImplDesc::GreedySplay, RootedImplDesc::TwoPassSplay,
+			RootedImplDesc::LocalTwoPassSplay, RootedImplDesc::MoveToRoot, RootedImplDesc::Simple]
+	}
+}
+
 
 pub trait ImplName {
 	fn name() -> &'static str;
@@ -234,7 +255,7 @@ impl<TWeight : MonoidWeight> ImplName for PetgraphDynamicForest<TWeight> {
 	}
 }
 
-impl<TNodeData : LCTNodeData> ImplName for LinkCutForest<TNodeData> {
+impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> ImplName for LinkCutForest<TNodeData, IMPL_EVERT> {
 	fn name() -> &'static str {
 		"Link-cut"
 	}
@@ -293,6 +314,37 @@ impl<TWeight : MonoidWeight> ImplName for SimpleDynamicTree<TWeight> {
 		"1-cut"
 	}
 }
+
+impl ImplName for RootedGreedySplayTT {
+	fn name() -> &'static str {
+		"Greedy Splay"
+	}
+}
+
+impl ImplName for RootedTwoPassSplayTT {
+	fn name() -> &'static str {
+		"2P Splay"
+	}
+}
+
+impl ImplName for RootedLocalTwoPassSplayTT {
+	fn name() -> &'static str {
+		"L2P Splay"
+	}
+}
+
+impl ImplName for RootedMoveToRootTT {
+	fn name() -> &'static str {
+		"MTR"
+	}
+}
+
+impl ImplName for SimpleRootedForest {
+	fn name() -> &'static str {
+		"Simple"
+	}
+}
+
 
 /// Call `$do_mac!( $obj, <type>, <name> )`, where `<name>` is the name of the implementation
 /// `$imp_enum`, and `<type>` is the monoid dynamic tree type associated to `$imp_enum`. `<type>` is
@@ -360,6 +412,25 @@ macro_rules! do_for_impl_empty {
 				stt_benchmarks::bench_util::ImplDesc::MoveToRoot => $do_mac!( $obj, EmptyMoveToRootTT ),
 				stt_benchmarks::bench_util::ImplDesc::StableMoveToRoot => $do_mac!( $obj, EmptyStableMoveToRootTT ),
 				stt_benchmarks::bench_util::ImplDesc::OneCut => $do_mac!( $obj, EmptySimpleDynamicTree )
+			}
+		}
+	}
+}
+
+
+/// Call `$do_mac!( $obj, <type>, <name> )`, where `<name>` is the name of the implementation
+/// `$imp_enum`, and `<type>` is the empty dynamic tree type associated to `$imp_enum`.
+#[macro_export]
+macro_rules! do_for_impl_rooted {
+	( $imp_enum : ident, $do_mac : ident, $obj : ident ) => {
+		{
+			match $imp_enum {
+				stt_benchmarks::bench_util::RootedImplDesc::LinkCut => $do_mac!( $obj, RootedLinkCutTree ),
+				stt_benchmarks::bench_util::RootedImplDesc::GreedySplay => $do_mac!( $obj, RootedGreedySplayTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::TwoPassSplay => $do_mac!( $obj, RootedTwoPassSplayTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::LocalTwoPassSplay => $do_mac!( $obj, RootedLocalTwoPassSplayTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::MoveToRoot => $do_mac!( $obj, RootedMoveToRootTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::Simple => $do_mac!( $obj, SimpleRootedForest )
 			}
 		}
 	}

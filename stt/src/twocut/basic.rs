@@ -32,8 +32,8 @@ struct Node<TData : NodeData> {
 }
 
 impl<TData : NodeData> Node<TData> {
-	fn new() -> Node<TData> {
-		Node { parent : None, dsep_child : None, isep_child : None, data : TData::new() }
+	fn new( v : NodeIdx ) -> Node<TData> {
+		Node { parent : None, dsep_child : None, isep_child : None, data : TData::new( v ) }
 	}
 
 	fn swap_sep_children( &mut self ) {
@@ -208,7 +208,7 @@ impl<TData : NodeData> STTRotate for STT<TData> {
 impl<TData : NodeData> STT<TData> {
 	/// Creates a new STT on `n` nodes.
 	pub fn new( n : usize ) -> STT<TData> {
-		STT { nodes : (0..n).map( |_| Node::new() ).collect() }
+		STT { nodes : (0..n).map( |i| Node::new( NodeIdx::new( i ) ) ).collect() }
 	}
 
 	/// Makes `parent` the parent of `child`.

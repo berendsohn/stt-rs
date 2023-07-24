@@ -173,7 +173,7 @@ impl Display for EmptyNodeData {
 impl NodeData for EmptyNodeData {
 	type TWeight = EmptyGroupWeight;
 	
-	fn new() -> Self { EmptyNodeData{} }
+	fn new( _ : NodeIdx ) -> Self { EmptyNodeData{} }
 }
 
 impl PathWeightNodeData for EmptyNodeData {

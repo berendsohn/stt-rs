@@ -41,7 +41,7 @@ impl<TWeight: MonoidWeight> Display for SimpleParentWeightNodeData<TWeight> {
 impl<TWeight : MonoidWeight> NodeData for SimpleParentWeightNodeData<TWeight> {
 	type TWeight = TWeight;
 	
-	fn new() -> Self {
+	fn new( _ : NodeIdx ) -> Self {
 		SimpleParentWeightNodeData{ pdist : Infinite }
 	}
 }
