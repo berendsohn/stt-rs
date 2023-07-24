@@ -154,8 +154,8 @@ impl<TNodeData, TNTRImpl, TCPWImpl> DynamicForest for StandardDynamicForest<TNod
 	
 	fn link( &mut self, u : NodeIdx, v : NodeIdx, weight : TNodeData::TWeight ) {
 		// println!( "Linking #{u} to #{v}" );
-		TNTRImpl::node_to_root(self, u );
-		TNTRImpl::node_to_root(self, v );
+		TNTRImpl::node_to_root( self, u );
+		TNTRImpl::node_to_root( self, v );
 		assert!( self.t.get_parent( u ).is_none(), "It seems you're trying to link two nodes {u}, {v} in the same tree." );
 		self.t.attach( u, v );
 		TNodeData::after_attached( &mut self.t, u, weight );
@@ -293,35 +293,25 @@ pub struct StableNodesToTopPWImpl<TStrategy : StableNTRStrategy> {
 	_m : PhantomData<TStrategy>
 }
 
-/// Computes the weight of the underlying path from v to the root of its tree.
-/// Requires that v and all it's ancestors are 1-cut.
-/// Also returns the computed root
-fn simple_path_weight_to_root<TNodeData>( f : &mut (impl NodeDataAccess<TNodeData> + STTRotate + STTStructureRead),
-		v : NodeIdx ) -> (NodeIdx, TNodeData::TWeight)
-	where TNodeData : PathWeightNodeData
-{
-	if let Some( p ) = f.get_parent( v ) {
-		debug_assert!( !f.is_separator( v ) );
-		let (root, w) = simple_path_weight_to_root( f, p );
-		( root, w + f.data( v ).get_parent_path_weight() )
-	}
-	else {
-		( v, TNodeData::TWeight::identity() )
-	}
-}
-
-impl<TNodeData, TStrategy> CPWImplementation< TNodeData> for StableNodesToTopPWImpl<TStrategy>
+impl<TNodeData, TStrategy> CPWImplementation<TNodeData> for StableNodesToTopPWImpl<TStrategy>
 	where TNodeData : PathWeightNodeData, TStrategy : StableNTRStrategy
 {
-	
 	fn compute_path_weight( f : &mut (impl NodeDataAccess<TNodeData> + STTRotate + STTStructureRead),
 			u : NodeIdx, v : NodeIdx ) -> Option<TNodeData::TWeight>
 	{
 		TStrategy::node_to_root( f, u );
 		TStrategy::node_to_root( f, v );
-		let (u_root, w) = simple_path_weight_to_root( f, u );
-		debug_assert!( u_root == u || u_root == v );
-		if u_root == v {
+		
+		// Compute path from u to root. Use the fact that u has depth at most 3 and u and all its
+		// ancestors are 1-cut
+		let mut w = TNodeData::TWeight::identity();
+		let mut x = u;
+		while let Some( p ) = f.get_parent( x ) {
+			debug_assert!( !f.is_separator( p ) );
+			w = w + f.data( x ).get_parent_path_weight();
+			x = p;
+		}
+		if x == v {
 			Some( w )
 		}
 		else {
