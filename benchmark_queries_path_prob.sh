@@ -13,11 +13,11 @@ if [ "$1" != "--only-plot" ]; then
 	for p in 0 0.2 0.4 0.6 0.8 0.9 0.95 1
 	do
 		echo "Benchmark queries with $n vertices, $q queries, and path-query probability $p..."
-		for _ in {1..20}
+		for _ in {1..5}
 		do
 			s=$RANDOM
 			echo "  seed=$s"
-			./stt-benchmarks/target/release/bench_queries -n $n -q $q --seed $s -p $p --json link-cut greedy-splay stable-greedy-splay two-pass-splay stable-two-pass-splay local-two-pass-splay local-stable-two-pass-splay move-to-root stable-move-to-root one-cut >> results/$DATA_FILE
+			./stt-benchmarks/target/release/bench_queries -s $s -n $n -q $q -p $p --json link-cut greedy-splay stable-greedy-splay two-pass-splay stable-two-pass-splay local-two-pass-splay local-stable-two-pass-splay move-to-root stable-move-to-root one-cut >> results/$DATA_FILE && exit
 		done
 	done
 fi

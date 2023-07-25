@@ -205,7 +205,7 @@ struct CLI {
 	json : bool,
 	
 	/// Seed for the tree and query generator
-	#[arg(short, long, default_value_t = 0)]
+	#[arg(short, long)]
 	seed : u64,
 	
 	/// Shape of the generated underlying tree

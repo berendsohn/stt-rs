@@ -180,7 +180,7 @@ struct CLI {
 	json : bool,
 	
 	/// Seed for the random query generator
-	#[arg(long, default_value_t = 0)]
+	#[arg(short, long)]
 	seed : u64,
 	
 	/// Implementations to benchmark. Include all if omitted.

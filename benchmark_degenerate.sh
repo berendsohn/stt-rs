@@ -4,8 +4,6 @@ DATA_FILE=degenerate.jsonl
 DRAWING_FILE=degenerate.pdf
 
 if [ "$1" != "--only-plot" ]; then
-	SEED=0
-
 	mkdir -p results
 	rm -f results/$DATA_FILE
 
@@ -14,9 +12,9 @@ if [ "$1" != "--only-plot" ]; then
 		echo "Benchmark degenerate queries with $n vertices"...
 		for _ in {1..5}
 		do
-			./stt-benchmarks/target/release/bench_degenerate -s $SEED -n $n --json link-cut greedy-splay stable-greedy-splay two-pass-splay stable-two-pass-splay local-two-pass-splay local-stable-two-pass-splay move-to-root stable-move-to-root one-cut >> results/$DATA_FILE
+			./stt-benchmarks/target/release/bench_degenerate -n $n --json link-cut greedy-splay stable-greedy-splay two-pass-splay stable-two-pass-splay local-two-pass-splay local-stable-two-pass-splay move-to-root stable-move-to-root one-cut >> results/$DATA_FILE || exit
 		done
 	done
 fi
 
-python3 show_benchmarks/visualize.py --input-file results/$DATA_FILE --profile degenerate --output-file results/$DRAWING_FILE
+python3 show_benchmarks/visualize.py --input-file results/$DATA_FILE --profile degenerate --stdev --output-file results/$DRAWING_FILE

@@ -234,7 +234,7 @@ struct CLI {
 	json : bool,
 	
 	/// Seed for the random query generator
-	#[arg(short, long, default_value_t = 0)]
+	#[arg(short, long)]
 	seed : u64,
 	
 	/// What weights to use in the benchmark.

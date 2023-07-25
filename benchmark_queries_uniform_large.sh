@@ -13,7 +13,9 @@ if [ "$1" != "--only-plot" ]; then
 		echo "Benchmark queries with $n vertices"...
 		for _ in {1..5}
 		do
-			./stt-benchmarks/target/release/bench_queries -n $n -q $q --json link-cut greedy-splay stable-greedy-splay two-pass-splay stable-two-pass-splay local-two-pass-splay local-stable-two-pass-splay move-to-root stable-move-to-root one-cut >> results/$DATA_FILE
+			s=$RANDOM
+			echo "  seed=$s"
+			./stt-benchmarks/target/release/bench_queries -s $s -n $n -q $q --json link-cut greedy-splay stable-greedy-splay two-pass-splay stable-two-pass-splay local-two-pass-splay local-stable-two-pass-splay move-to-root stable-move-to-root one-cut >> results/$DATA_FILE || exit
 		done
 	done
 fi

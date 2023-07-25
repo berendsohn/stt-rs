@@ -4,8 +4,6 @@ DATA_FILE=degenerate_noisy.jsonl
 DRAWING_FILE=degenerate_noisy.pdf
 
 if [ "$1" != "--only-plot" ]; then
-	SEED=0
-
 	mkdir -p results
 	rm -f results/$DATA_FILE
 
@@ -16,7 +14,13 @@ if [ "$1" != "--only-plot" ]; then
 		echo "Benchmark degenerate queries with $n vertices and std-dev $d..."
 		for _ in {1..5}
 		do
-			./stt-benchmarks/target/release/bench_degenerate -s $SEED -n $n -d $d --json link-cut greedy-splay stable-greedy-splay two-pass-splay stable-two-pass-splay local-two-pass-splay local-stable-two-pass-splay move-to-root stable-move-to-root one-cut >> results/$DATA_FILE
+			if (($d == 0)) then
+				./stt-benchmarks/target/release/bench_degenerate -n $n -d $d --json link-cut greedy-splay stable-greedy-splay two-pass-splay stable-two-pass-splay local-two-pass-splay local-stable-two-pass-splay move-to-root stable-move-to-root one-cut >> results/$DATA_FILE || exit
+			else
+				s=$RANDOM
+				echo "  seed=$s"
+				./stt-benchmarks/target/release/bench_degenerate -s $s -n $n -d $d --json link-cut greedy-splay stable-greedy-splay two-pass-splay stable-two-pass-splay local-two-pass-splay local-stable-two-pass-splay move-to-root stable-move-to-root one-cut >> results/$DATA_FILE || exit
+			fi
 		done
 	done
 fi

@@ -11,9 +11,11 @@ if [ "$1" != "--only-plot" ]; then
 	do
 		let q=$n*$n
 		echo "Benchmark fully-dynamic connectivity on $n vertices with $q queries"...
-		for _ in {1..20}
+		for _ in {1..5}
 		do
-			./stt-benchmarks/target/release/bench_fd_con -n $n -q $q --json link-cut greedy-splay stable-greedy-splay two-pass-splay stable-two-pass-splay local-two-pass-splay local-stable-two-pass-splay move-to-root stable-move-to-root one-cut >> results/$DATA_FILE
+			s=$RANDOM
+			echo "  seed=$s"
+			./stt-benchmarks/target/release/bench_fd_con -s $s -n $n -q $q --json link-cut greedy-splay stable-greedy-splay two-pass-splay stable-two-pass-splay local-two-pass-splay local-stable-two-pass-splay move-to-root stable-move-to-root one-cut >> results/$DATA_FILE || exit
 		done
 	done
 fi

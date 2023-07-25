@@ -57,7 +57,7 @@ fn generate_queries( num_vertices : usize, num_queries : usize, rng : &mut impl 
 			let v = NodeIdx::new( v );
 			let ur = drf.find_root( u );
 			let vr = drf.find_root( v );
-			
+
 			if ur == vr {
 				// u and v in same tree
 				LCA( u, v )
@@ -97,7 +97,7 @@ fn read_lca_file( path : &PathBuf ) -> io::Result<(usize, Vec<Query>)> {
 				let v = NodeIdx::new( edge_parts[2].parse()? );
 				return Ok( (u,v) )
 			}
-			
+
 			if parts.len() == 4 {
 				if let Ok( e ) = parse_edge( &parts ) {
 					let (u,v) = e;
@@ -131,7 +131,7 @@ impl Helper {
 	fn new( num_vertices : usize, input : Vec<Query>, print : PrintType ) -> Helper {
 		Helper{ num_vertices, input, print }
 	}
-	
+
 	fn report_test_result( &mut self, impl_name : &str, dur : Duration ) {
 		if self.print == Print {
 			let millis = dur.as_micros() as f64 / 1000.;
@@ -147,7 +147,7 @@ impl Helper {
 			} ) )
 		}
 	}
-	
+
 	fn benchmark_fd_con<TRDynForest : RootedDynamicForest>( &mut self, impl_name : &str ) {
 		let start = Instant::now();
 		let mut drf = TRDynForest::new( self.num_vertices );
@@ -182,42 +182,41 @@ struct CLI {
 	/// Number of vertices in the underlying graph
 	#[arg(short, long, default_value_t = 1_000)]
 	num_vertices : usize,
-	
+
 	/// Number of queries (link/cut/lca) to generate
 	#[arg(short='q', long, default_value_t = 20_000)]
 	num_queries : usize,
-	
+
 	/// Read input graph from the given file (ignore -n, -q, --seed)
 	#[arg(short, long, required = false)]
 	input : Option<PathBuf>,
-	
+
 	/// Use the cut_edge() method instead of cut() (puts STT implementation at an (unfair) advantage)
 	#[arg(long)]
 	cut_edge : bool,
-	
+
 	/// Print the results in human-readable form
 	#[arg(long, default_value_t = false)]
 	print : bool,
-	
+
 	/// Output the results as json
 	#[arg(long, default_value_t = false)]
 	json : bool,
-	
+
 	/// Seed for the random query generator
-	#[arg(long, default_value_t = 0)]
+	#[arg(short, long)]
 	seed : u64,
-	
+
 	/// Implementations to benchmark. Include all if omitted.
 	impls : Vec<RootedImplDesc>
 }
 
 
-// FIXME: Rename to bench_lca?
 fn main() {
 	let cli = CLI::parse();
-	
+
 	let print = PrintType::from_args( cli.print, cli.json );
-	
+
 	let impls : Vec<RootedImplDesc>;
 	if !cli.impls.is_empty() {
 		impls = cli.impls;
@@ -228,7 +227,7 @@ fn main() {
 
 	let num_vertices : usize;
 	let input : Vec<Query>;
-	
+
 	// Read edges // TODO: Remove if unused!
 	if let Some( input_path ) = &cli.input {
 		if cli.print {
@@ -241,7 +240,7 @@ fn main() {
 				exit( 1 );
 			}
 		}
-		
+
 		if cli.print {
 			println!( " Done reading {} edges on {num_vertices} vertices.", input.len() );
 		}
@@ -249,7 +248,7 @@ fn main() {
 	else {
 		let mut rng = StdRng::seed_from_u64( cli.seed );
 		num_vertices = cli.num_vertices;
-		
+
 		// Generate edges
 		if cli.print {
 			println!( "Generating {} queries on {num_vertices} vertices. Seed: {}.", cli.num_queries, cli.seed );
@@ -259,21 +258,21 @@ fn main() {
 			stdout().flush().expect( "Couldn't flush for some reason" );
 		}
 		input = generate_queries( num_vertices, cli.num_queries, &mut rng, cli.cut_edge ).collect();
-		
+
 		if cli.print {
 			println!( " Done." );
 		}
 	}
-	
+
 	if cli.print {
 		let num_links = input.iter().filter( |q| matches!( q, Link( _, _ ) ) ).count();
 		let num_cuts = input.iter().filter( |q| matches!( q, CutEdge( _, _ ) ) || matches!( q, Cut( _ ) ) ).count();
 		let num_lcas = input.len() - num_links - num_cuts;
 		println!( "Benchmarking input with {num_links} links, {num_cuts} cuts and {num_lcas} LCA queries." );
 	}
-	
+
 	let mut helper = Helper::new( num_vertices, input, print );
-	
+
 	for imp in &impls {
 		benchmark( *imp, &mut helper );
 	}

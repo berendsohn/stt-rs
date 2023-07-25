@@ -1,7 +1,8 @@
 use std::cmp::{max, min};
 use std::time::Instant;
+use clap::error::ErrorKind;
 
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
 use rand_distr::Normal;
@@ -86,11 +87,8 @@ fn benchmark( imp : ImplDesc, helper : &mut Helper ) {
 
 #[derive(Parser)]
 #[command(name = "Degenerate tree benchmark")]
+#[command(long_about = "Perform compute_path_weight(u,v) queries on a path, where u goes through the nodes in order, and v is the last node.")]
 struct CLI {
-	/// Random seed
-	#[arg(short, long)]
-	seed : u64,
-	
 	/// Number of vertices in the underlying graph
 	#[arg(short, long, default_value_t = 1_000)]
 	num_nodes : usize,
@@ -98,6 +96,10 @@ struct CLI {
 	/// Standard deviation of node queries.
 	#[arg(short='d', long, default_value_t = 0_f64)]
 	std_dev : f64,
+
+	/// Random seed, if --std-dev is not 0.
+	#[arg(short, long)]
+	seed : Option<u64>,
 	
 	/// Print the results in human-readable form
 	#[arg(long, default_value_t = false)]
@@ -121,13 +123,31 @@ fn main() {
 	else {
 		impls = ImplDesc::all()
 	}
+
+	let seed : u64;
+	if let Some( s ) = cli.seed {
+		if cli.std_dev == 0. {
+			CLI::command().error( ErrorKind::ArgumentConflict, "stdev is 0, no seed allowed" ).exit();
+		}
+		else {
+			seed = s;
+		}
+	}
+	else {
+		if cli.std_dev != 0. {
+			CLI::command().error( ErrorKind::ArgumentConflict, "stdev is not 0, need a seed" ).exit();
+		}
+		else {
+			seed = 0
+		}
+	}
 	
 	for imp in impls {
 		benchmark( imp, &mut Helper::new(
 			cli.num_nodes,
 			PrintType::from_args( cli.print, cli.json ),
 			cli.std_dev,
-			cli.seed
+			seed
 		) );
 	}
 }

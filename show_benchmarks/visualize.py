@@ -120,6 +120,13 @@ class YMillis :
 	def value( benchmark : JsonObj ) -> float :
 		return benchmark["time_ns"] / 1_000_000
 
+class YRotationsPerQuery :
+	label = "rots/query"
+
+	@staticmethod
+	def value( benchmark : JsonObj ) -> float :
+		return benchmark["rotation_count"] / benchmark["num_queries"]
+
 class TitleFixedVal :
 	def __init__( self, tpl : str, val_func : Callable[[JsonObj], Any], val_name_plural : str ) :
 		self._tpl = tpl
@@ -189,7 +196,11 @@ PROFILES = {
 			TitleFixedVal( "Random queries (n = {}, q = {})", lambda b : ( b["num_vertices"], b["num_queries"] ), "vertices/queries" ),
 			lambda _ : True ),
 	"cache" : ( XNumGroups, YMicrosPerQuery,
-			TitleFixedGroupSizesAndQueries( "Cache (n/group = {}, q/group = {})" ), lambda _ : True )
+			TitleFixedGroupSizesAndQueries( "Cache (n/group = {}, q/group = {})" ), lambda _ : True ),
+	"lca" : ( XNumVerts( log_scale = False ),
+			YMicrosPerQuery, TitleFixedQueryFactor( "Uniform LCA queries (q/n = {})" ), lambda _ : True ),
+	"num_rotations" : ( XNumVerts(), YRotationsPerQuery,
+			"Rotation count (q=n²)", lambda _ : True, validate_queries_quadratic )
 }
 
 ALGORITHM_COLORS = {
@@ -204,7 +215,8 @@ ALGORITHM_COLORS = {
 	"Stable L2P Splay" : "tab:pink",
 	"MTR" : "tab:green",
 	"Stable MTR" : "tab:olive",
-	"1-cut" : "tab:gray"
+	"1-cut" : "tab:gray",
+	"Simple" : "tab:gray"
 }
 
 def main() :
@@ -212,11 +224,12 @@ def main() :
 	parser.add_argument( "--input-file", required = True )
 	parser.add_argument( "--profile", choices = sorted( PROFILES.keys() ), required = True )
 	parser.add_argument( "--output-file", help = "Where to write the resulting image. If omitted, shows the image instead", default = None )
-	parser.add_argument( "--exclude", nargs="*", choices = sorted( ALGORITHM_COLORS.keys() ), help ="Exclude the specified algorithm(s)" )
+	parser.add_argument( "--exclude", nargs="*", choices = sorted( ALGORITHM_COLORS.keys() ), help = "Exclude the specified algorithm(s)" )
+	parser.add_argument( "--stdev", action = "store_true", help = "Show standard deviation error bars" )
 	parser.add_argument( "-v", "--verbose", help = "Print results to stdout" )
 	args = parser.parse_args()
 	
-	OUTPUT_FOR_PAPER = True # Whether to produce plots for the paper, or larger plots to be read separately
+	OUTPUT_FOR_PAPER = False # Whether to produce plots for the paper, or larger plots to be read separately
 	
 	print( f"Drawing plot from {args.input_file} with profile {args.profile}..." )
 	
@@ -264,7 +277,7 @@ def main() :
 	for impl, xs, ys, stdevs in impls_with_plots :
 		max_y = max( max_y, max( ys ) )
 		print( impl, ys )
-		if None not in stdevs :
+		if args.stdev and None not in stdevs :
 			plt.errorbar( xs, ys, yerr = [stdevs, stdevs], capsize = 2, label = impl, color = ALGORITHM_COLORS[impl], linewidth = linewidth )
 		else :
 			plt.plot( xs, ys, label = impl, linewidth = linewidth )

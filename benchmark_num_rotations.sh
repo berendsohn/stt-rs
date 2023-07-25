@@ -11,13 +11,13 @@ if [ "$1" != "--only-plot" ]; then
 	do
 		q=$((n*n))
 		echo "Count rotations with $q queries on $n vertices..."
-		for _ in {1..20}
+		for _ in {1..5}
 		do
 			s=$RANDOM
 			echo "  seed=$s"
-			./stt-benchmarks/target/release/bench_num_rotations --json --seed $s -n $n -q $q >> results/$DATA_FILE
+			./stt-benchmarks/target/release/bench_num_rotations --json -s $s -n $n -q $q >> results/$DATA_FILE || exit
 		done
 	done
 fi
 
-#python3 show_benchmarks/visualize.py --input-file results/$DATA_FILE --profile queries-path-prob --output-file results/$DRAWING_FILE
+python3 show_benchmarks/visualize.py --input-file results/$DATA_FILE --profile num_rotations --output-file results/$DRAWING_FILE
