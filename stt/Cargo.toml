@@ -18,9 +18,6 @@ rand = "0.8"
 
 [profile.release]
 panic = "abort"
-
-[profile.release-lto]
-inherits = "release"
 lto = true
 
 [[test]]

@@ -3,6 +3,10 @@ name = "stt-benchmarks"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+panic = "abort"
+lto = true
+
 [dependencies]
 stt = { version = "0.1", path = "../stt", features  = ["generate", "petgraph"] }
 
