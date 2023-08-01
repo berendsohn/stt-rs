@@ -38,6 +38,7 @@ impl NodeData for RootedNodeData {
 }
 
 /// An STT-based rooted dynamic forest using an [ExtendedNTRStrategy].
+#[derive(Clone)]
 pub struct StandardRootedDynamicForest<TNTRStrat : ExtendedNTRStrategy> {
 	t : STT<RootedNodeData>,
 	_m : PhantomData<TNTRStrat>
