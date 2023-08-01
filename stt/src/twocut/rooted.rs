@@ -210,7 +210,7 @@ impl<TNTRStrat : ExtendedNTRStrategy> RootedDynamicForest for StandardRootedDyna
 		if let Some( c ) = self.get_direct_separator_child( u ) {
 			// T_c is between u and v
 			let c_out = self.t.data( c ).st_out;
-			let u_out = self.t.data( v ).st_out;
+			let u_out = self.t.data( u ).st_out;
 			if c_out && !u_out {
 				// u <- T_c <- v
 				Some( u )
