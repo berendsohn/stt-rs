@@ -2,7 +2,6 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, stdout, Write};
-use std::num::ParseIntError;
 use std::path::PathBuf;
 use std::process::exit;
 use std::time::{Duration, Instant};
@@ -58,7 +57,7 @@ fn read_con_file( path : &PathBuf ) -> io::Result<(usize, Vec<Query>)> {
 		let line = line?;
 		let parts : Vec<_> = line.split( " " ).collect();
 		if parts[0] == "fd_con" {
-			// "mst <num_vertices> <num_edges>"
+			// "fd_con <num_vertices> <num_edges>"
 			if parts.len() == 3 {
 				if let Ok( n ) = parts[1].parse() {
 					// Ignore number of edges
@@ -71,13 +70,29 @@ fn read_con_file( path : &PathBuf ) -> io::Result<(usize, Vec<Query>)> {
 		else if ["i", "d"].contains( &parts[0] ) {
 			// "i <u> <v>" or "d <u> <v>"
 
-			fn parse_edge( edge_parts : &Vec<&str>) -> Result<Edge, ParseIntError> {
-				let u = NodeIdx::new( edge_parts[1].parse()? );
-				let v = NodeIdx::new( edge_parts[2].parse()? );
+			let parse_vertex = |s : &str| {
+				match s.parse() {
+					Err( _ ) => Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid vertex: '{s}'" ) ) ),
+					Ok( idx ) => {
+						if idx < num_vertices {
+							Ok( NodeIdx::new( idx ) )
+						}
+						else {
+							println!( "Note: out of bounds: {idx} > {num_vertices}" );
+							Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid vertex: '{idx}'" ) ) )
+						}
+					}
+				}
+			};
+
+			let parse_edge = |edge_parts : &Vec<&str>| -> Result<Edge, io::Error> {
+				let u = parse_vertex( edge_parts[1] )?;
+				let v = parse_vertex( edge_parts[2] )?;
+
 				return Ok( (u,v) )
-			}
+			};
 			
-			if parts.len() == 4 {
+			if parts.len() == 3 {
 				if let Ok( e ) = parse_edge( &parts ) {
 					let (u,v) = e;
 					if parts[0] == "i" {
@@ -168,8 +183,8 @@ struct CLI {
 	num_queries : usize,
 	
 	/// Read input graph from the given file (ignore -n, -q, --seed)
-	#[arg(short, long, required = false)]
-	input : Option<PathBuf>,
+	#[arg(short, long, group = "input")]
+	input_file : Option<PathBuf>,
 	
 	/// Print the results in human-readable form
 	#[arg(long, default_value_t = false)]
@@ -180,8 +195,8 @@ struct CLI {
 	json : bool,
 	
 	/// Seed for the random query generator
-	#[arg(short, long)]
-	seed : u64,
+	#[arg(short, long, group = "input")]
+	seed : Option<u64>,
 	
 	/// Implementations to benchmark. Include all if omitted.
 	impls : Vec<ImplDesc>
@@ -206,7 +221,7 @@ fn main() {
 	let input : Vec<Query>;
 	
 	// Read edges
-	if let Some( input_path ) = &cli.input {
+	if let Some( input_path ) = &cli.input_file {
 		if cli.print {
 			println!( "Reading edges from '{}'", input_path.display() );
 		}
@@ -223,12 +238,13 @@ fn main() {
 		}
 	}
 	else {
-		let mut rng = StdRng::seed_from_u64( cli.seed );
+		let seed = cli.seed.unwrap();
+		let mut rng = StdRng::seed_from_u64( seed );
 		num_vertices = cli.num_vertices;
 		
 		// Generate edges
 		if cli.print {
-			println!( "Generating {} queries on {num_vertices} vertices. Seed: {}.", cli.num_queries, cli.seed );
+			println!( "Generating {} queries on {num_vertices} vertices. Seed: {}.", cli.num_queries, seed );
 			stdout().flush().expect( "Couldn't flush for some reason" );
 		}
 		input = generate_queries( num_vertices, cli.num_queries, &mut rng ).collect();

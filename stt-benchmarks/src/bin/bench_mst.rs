@@ -116,6 +116,7 @@ fn read_mst( path : &PathBuf ) -> io::Result<(usize, Vec<EdgeWithWeight>)> {
 			}
 			return Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid line: '{line}'" ) ) );
 		}
+		// TODO: Allow decreasing weight
 		else if parts[0] == "c" {}
 		else {
 			return Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid line: '{line}'" ) ) );
@@ -243,8 +244,8 @@ struct CLI {
 	complete : bool,
 	
 	/// Read input graph from the given file (ignore -n, -e, --complete)
-	#[arg(short, long, required = false)]
-	input : Option<PathBuf>,
+	#[arg(short, long, group = "input")]
+	input_file : Option<PathBuf>,
 	
 	/// Verify the results of each benchmark
 	#[arg(long, default_value_t = false)]
@@ -258,9 +259,9 @@ struct CLI {
 	#[arg(long, default_value_t = false)]
 	json : bool,
 	
-	/// Seed for the random graph generator
-	#[arg(short, long)]
-	seed : u64,
+	/// Seed for the random graph generator.
+	#[arg(short, long, group = "input")]
+	seed : Option<u64>,
 	
 	/// Implementations to benchmark. Include all if omitted.
 	impls : Vec<ImplDesc>
@@ -285,7 +286,7 @@ fn main() {
 	let input_edges : Vec<EdgeWithWeight>;
 	
 	// Read edges
-	if let Some( input_path ) = &cli.input {
+	if let Some( input_path ) = &cli.input_file {
 		if cli.print {
 			println!( "Reading edges from '{}'", input_path.display() );
 		}
@@ -302,7 +303,8 @@ fn main() {
 		}
 	}
 	else {
-		let mut rng = StdRng::seed_from_u64( cli.seed );
+		let seed = cli.seed.unwrap();
+		let mut rng = StdRng::seed_from_u64( seed );
 		num_vertices = cli.num_vertices;
 		let num_edges = num_vertices * cli.edge_factor;
 		let all_edges = cli.complete;
@@ -310,14 +312,14 @@ fn main() {
 		// Generate edges
 		if all_edges {
 			if cli.print {
-				println!( "Generating complete graph on {num_vertices} vertices. Seed: {}.", cli.seed );
+				println!( "Generating complete graph on {num_vertices} vertices. Seed: {}.", seed );
 				stdout().flush().expect( "Couldn't flush for some reason" );
 			}
 			input_edges = generate_complete_edges_with_weights( num_vertices, &mut rng );
 		}
 		else {
 			if cli.print {
-				println!( "Generating sparse random graph on {num_vertices} vertices, with {num_edges} edges. Seed: {}.", cli.seed );
+				println!( "Generating sparse random graph on {num_vertices} vertices, with {num_edges} edges. Seed: {}.", seed );
 				stdout().flush().expect( "Couldn't flush for some reason" );
 			}
 			input_edges = generate_sparse_edges_with_weights( num_vertices, num_edges, &mut rng );
