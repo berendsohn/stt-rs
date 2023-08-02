@@ -30,14 +30,12 @@ type DiEdge = (NodeIdx, NodeIdx);
 enum Query {
 	Link( NodeIdx, NodeIdx ),
 	Cut( NodeIdx ),
-	CutEdge( NodeIdx, NodeIdx ), // FIXME: Remove
 	LCA( NodeIdx, NodeIdx ),
 	Evert( NodeIdx )
 }
 
 fn generate_queries( num_vertices : usize, num_queries : usize, rng : &mut impl Rng,
-		use_cut_edge : bool, allow_evert : bool ) -> impl Iterator<Item=Query> + '_ {
-	assert!( !use_cut_edge ); // FIXME
+		allow_evert : bool ) -> impl Iterator<Item=Query> + '_ {
 	let mut drf = SimpleRootedForest::new( num_vertices );
 	let mut non_root_nodes : IndexSet<NodeIdx> = IndexSet::new();
 	(0..num_queries).map( move |_| {
@@ -117,7 +115,7 @@ fn read_lca_file( path : &PathBuf ) -> io::Result<(usize, Vec<Query>)> {
 					let (u,v) = e;
 					match parts[0] {
 						"l" => queries.push( Link( u, v ) ),
-						"c" => queries.push( CutEdge( u, v ) ),
+						"c" => queries.push( Cut( u ) ), // TODO
 						_ => queries.push( LCA( u, v ) )
 					}
 					continue
@@ -125,7 +123,6 @@ fn read_lca_file( path : &PathBuf ) -> io::Result<(usize, Vec<Query>)> {
 			}
 			return Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid line: '{line}'" ) ) );
 		}
-		else if parts[0] == "c" {}
 		else {
 			return Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid line: '{line}'" ) ) );
 		}
@@ -169,7 +166,6 @@ impl Helper {
 			match query {
 				Link( u, v ) => drf.link( u, v ),
 				Cut( v ) => drf.cut( v ),
-				CutEdge( u, v ) => drf.cut_edge( u, v ),
 				LCA( u, v ) => { drf.lowest_common_ancestor( u, v ).expect( "LCA query failed" ); },
 				Evert( _ ) => panic!( "Evert not supported!" )
 			}
@@ -185,7 +181,6 @@ impl Helper {
 			match query {
 				Link( u, v ) => drf.link( u, v ),
 				Cut( v ) => drf.cut( v ),
-				CutEdge( u, v ) => drf.cut_edge( u, v ),
 				LCA( u, v ) => { drf.lowest_common_ancestor( u, v ).expect( "LCA query failed" ); },
 				Evert( v ) => drf.make_root( v )
 			}
@@ -235,10 +230,6 @@ struct CLI {
 
 	#[arg(short='e', long)]
 	allow_evert : bool,
-
-	/// Use the cut_edge() method instead of cut() (puts STT implementation at an (unfair) advantage)
-	#[arg(long)]
-	cut_edge : bool,
 
 	/// Print the results in human-readable form
 	#[arg(long, default_value_t = false)]
@@ -298,12 +289,9 @@ fn main() {
 		// Generate queries
 		if cli.print {
 			println!( "Generating {} queries on {num_vertices} vertices. Seed: {}.", cli.num_queries, cli.seed );
-			if cli.cut_edge {
-				println!( "Using cut_edge() method instead of cut()" );
-			}
 			stdout().flush().expect( "Couldn't flush for some reason" );
 		}
-		input = generate_queries( num_vertices, cli.num_queries, &mut rng, cli.cut_edge, cli.allow_evert ).collect();
+		input = generate_queries( num_vertices, cli.num_queries, &mut rng, cli.allow_evert ).collect();
 
 		if cli.print {
 			println!( " Done." );
@@ -312,7 +300,7 @@ fn main() {
 
 	if cli.print {
 		let num_links = input.iter().filter( |q| matches!( q, Link( _, _ ) ) ).count();
-		let num_cuts = input.iter().filter( |q| matches!( q, CutEdge( _, _ ) ) || matches!( q, Cut( _ ) ) ).count();
+		let num_cuts = input.iter().filter( |q| matches!( q, Cut( _ ) ) ).count();
 		let num_everts = input.iter().filter( |q| matches!( q, Evert( _ ) ) ).count();
 		let num_lcas = input.len() - num_links - num_cuts - num_everts;
 		println!( "Benchmarking input with {num_links} links, {num_cuts} cuts, {num_everts} everts and {num_lcas} LCA queries." );
