@@ -12,13 +12,19 @@ use crate::twocut::basic::{MakeOneCutSTT, STT, STTRotate, STTStructureRead};
 /// NodeData allowing maintanance of the (underlying) root of each tree.
 #[derive( Clone )]
 pub struct RootedNodeData {
-	/// The lca (in the underlying tree) of the subtree (in the STT) rooted at this node
-	st_lca : NodeIdx
+	/// The root `r` of the underlying tree containing this node, if `r` is a descendant of this
+	/// node. Otherwise, None.
+	desc_root : Option<NodeIdx>
 }
 
 impl Display for RootedNodeData {
 	fn fmt( &self, f : &mut Formatter<'_> ) -> std::fmt::Result {
-		write!( f, "{}", self.st_lca )
+		if let Some( r ) = self.desc_root {
+			write!( f, "{}", r )
+		}
+		else {
+			write!( f, "-" )
+		}
 	}
 }
 
@@ -26,7 +32,7 @@ impl NodeData for RootedNodeData {
 	type TWeight = EmptyGroupWeight;
 	
 	fn new( v : NodeIdx ) -> Self {
-		RootedNodeData{ st_lca : v }
+		RootedNodeData{ desc_root : Some( v ) }
 	}
 }
 
@@ -40,64 +46,23 @@ pub struct StandardRootedDynamicForest<TNTRStrat : ExtendedNTRStrategy> {
 impl<TNTRStrat : ExtendedNTRStrategy> StandardRootedDynamicForest<TNTRStrat> {
 	/// Finds `LCA(u,v)`, where `{u,v}` is the boundary of `T_x`.
 	/// 
-	/// Assumes `x` is a separator node, and `LCA(u,v)` is contains in `T_x`, so we have
-	/// `u -> x <- v`
+	/// Assumes `x` is a separator node, and the underlying tree root, as well as `LCA(u,v)` is
+	/// contained in `T_x`.
 	fn lca_in( &mut self, x : NodeIdx ) -> NodeIdx {
-		// Denote by d the direct and by i the indirect separator of x
-		let x_st_lca = self.t.data( x ).st_lca;
 		if let Some( d ) = self.get_direct_separator_child( x ) {
-			if self.t.data( d ).st_lca == x_st_lca {
-				// u -> d <- x <- v
+			if self.t.data( d ).desc_root.is_some() {
 				return self.lca_in( d )
 			}
 		}
 		if let Some( i ) = self.get_indirect_separator_child( x ) {
-			if self.t.data( i ).st_lca == x_st_lca {
-				// u -> x -> i <- v
+			if self.t.data( i ).desc_root.is_some() {
 				return self.lca_in( i )
 			}
 		}
-		// Otherwise: u [-> d] -> x <- [i <-] v, so we found the LCA
+
+		// Root is below x, but not below d or i.
 		TNTRStrat::node_to_root( self, x ); // For amortized analysis
 		x
-	}
-	
-	/// Returns the parent of `v` in the underlying forest, if it has one.
-	fn find_parent( &mut self, v : NodeIdx ) -> Option<NodeIdx> {
-		// Do a partial find_root(), since we rotate v up later anyway.
-		let r = { 
-			let mut x = v;
-			while let Some( p ) = self.get_parent( x ) {
-				x = p;
-			}
-			self.t.data( x ).st_lca
-		};
-		if r == v {
-			return None; // v itself is the root.
-		}
-		
-		TNTRStrat::node_to_root( self, r );
-		TNTRStrat::node_below_root( self, v );
-		
-		if let Some( c ) = self.get_direct_separator_child( v ) {
-			// v -> T_c -> r
-			// Find the node in T_c that is connected to v.
-			// Follow the "left spine" of T_c
-			if let Some( d ) = self.get_direct_separator_child( c ) {
-				let mut x = d;
-				while let Some( y ) = self.get_indirect_separator_child( x ) {
-					x = y;
-				}
-				Some( x )
-			}
-			else {
-				Some( c )
-			}
-		}
-		else {
-			// No nodes between v and r
-			Some( r )
-		}
 	}
 }
 
@@ -119,28 +84,23 @@ impl<TNTRStrat: ExtendedNTRStrategy> RootedForest for StandardRootedDynamicFores
 
 impl<TNTRStrat : ExtendedNTRStrategy> STTRotate for StandardRootedDynamicForest<TNTRStrat>{
 	fn rotate( &mut self, v : NodeIdx) {
-		let p = self.get_parent( v ).unwrap();
-		// let old_p_out = self.t.data( p ).st_out;
-		let old_p_lca = self.t.data( p ).st_lca;
-		
-		if let Some( c ) = self.get_direct_separator_child( v ) {
-			let c_lca = self.t.data( c ).st_lca;
-			if c_lca != self.t.data( v ).st_lca {
-				// [v <- c <- p], so st_lca'(T_p) is in c
-				self.t.data_mut( p ).st_lca = c_lca;
+		let p = self.get_parent(v).unwrap();
+
+		let old_v_desc_root = self.t.data( v ).desc_root;
+		self.t.data_mut( v ).desc_root = self.t.data( p ).desc_root;
+
+		if old_v_desc_root.is_some() {
+			if let Some( c ) = self.t.get_direct_separator_child( v ) {
+				if self.t.data( c ).desc_root.is_none() {
+					// Root is below v, but not below c
+					self.t.data_mut( p ).desc_root = None;
+				}
+			} else {
+				// Root is below v, but not below (non-existing) c
+				self.t.data_mut( p ).desc_root = None;
 			}
-			// Otherwise, [v -> c -? p], so st_lca'(T_p) = st_lca(T_p)
-		}
-		else {
-			if old_p_lca == self.t.data( v ).st_lca {
-				// [v <- p]
-				self.t.data_mut( p ).st_lca = p;
-			}
-			// Otherwise, [v -> p], so st_lca'(T_p) = st_lca(T_p)
 		}
 
-		self.t.data_mut( v ).st_lca = old_p_lca;
-		
 		self.t.rotate( v );
 	}
 }
@@ -160,12 +120,41 @@ impl<TNTRStrat : ExtendedNTRStrategy> RootedDynamicForest for StandardRootedDyna
 		TNTRStrat::node_to_root( self, u );
 		TNTRStrat::node_to_root( self, v );
 		debug_assert!( self.t.get_parent( u ).is_none(), "It seems you're trying to link two nodes {u}, {v} in the same tree." );
+		debug_assert!( self.t.data( u ).desc_root == Some( u ), "It seems you're trying to link a non-root node {u}" );
 		self.t.attach( u, v );
+		self.t.data_mut( u ).desc_root = None;
 	}
 	
 	fn cut( &mut self, v : NodeIdx ) {
-		let p = self.find_parent( v ).unwrap();
-		return self.cut_edge( v, p );
+		TNTRStrat::node_to_root( self, v );
+		let r = self.t.data( v ).desc_root.unwrap();
+
+		debug_assert!( r != v, "It seems you're trying to cut at the root." );
+
+		// TODO: Simple checks here?
+
+		// Find child of x with r in its subtree.
+		let mut x = r;
+		while let Some( p ) = self.get_parent( x ) {
+			if p == v {
+				break;
+			}
+			x = p;
+		}
+
+		// Find parent of v in the underlying tree
+		if let Some( d ) = self.get_direct_separator_child( x ) {
+			x = d;
+			while let Some( i ) = self.get_indirect_separator_child( x ) {
+				x = i;
+			}
+		}
+		TNTRStrat::node_below_root( self, x );
+		debug_assert!( self.get_direct_separator_child( x ).is_none() );
+
+		self.t.detach( x );
+		self.t.data_mut( v ).desc_root = Some( v );
+		return;
 	}
 	
 	fn cut_edge( &mut self, u : NodeIdx, v : NodeIdx) {
@@ -179,7 +168,7 @@ impl<TNTRStrat : ExtendedNTRStrategy> RootedDynamicForest for StandardRootedDyna
 	
 	fn find_root( &mut self, v : NodeIdx ) -> NodeIdx {
 		TNTRStrat::node_to_root( self, v );
-		self.t.data( v ).st_lca // The LCA of the whole tree is its root
+		self.t.data( v ).desc_root.unwrap()
 	}
 	
 	fn lowest_common_ancestor( &mut self, u : NodeIdx, v : NodeIdx ) -> Option<NodeIdx> {
@@ -189,25 +178,23 @@ impl<TNTRStrat : ExtendedNTRStrategy> RootedDynamicForest for StandardRootedDyna
 			return None // u, v are in different trees
 		}
 
-		let u_lca = self.t.data( u ).st_lca;
-
-		if u_lca != self.t.data( v ).st_lca {
-			// u -> v
+		// u is now a child of v
+		if self.t.data( u ).desc_root.is_none() {
+			// Root is in T_v, but not T_u
 			Some( v )
 		}
 		else if let Some( c ) = self.get_direct_separator_child( u ) {
-			// u -- T_c <- v
-			if self.t.data( c ).st_lca != u_lca {
-				// u <- T_c <- v
+			if self.t.data( c ).desc_root.is_none() {
+				// Root is in T_u, but not T_v
 				Some( u )
 			}
 			else {
-				// u -> T_c <- v
+				// Root is in T_c, so lca(u,v) is also in T_c
 				Some( self.lca_in( c ) )
 			}
 		}
 		else {
-			// u <- v, nothing between u and v
+			// Root is below u, nothing between u and v
 			Some( u )
 		}
 	}
