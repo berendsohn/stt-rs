@@ -108,8 +108,8 @@ impl<TNTRStrat : ExtendedNTRStrategy> STTRotate for StandardRootedDynamicForest<
 impl<TNTRStrat : ExtendedNTRStrategy> RootedDynamicForest for StandardRootedDynamicForest<TNTRStrat> {
 	type NodeIdxIterator = <STT<RootedNodeData> as MakeOneCutSTT>::NodeIdxIterator;
 	
-	fn new( num_nodes : usize ) -> Self {
-		Self{ t : STT::new( num_nodes ), _m : PhantomData::default() }
+	fn new( num_vertices : usize ) -> Self {
+		Self{ t : STT::new( num_vertices ), _m : PhantomData::default() }
 	}
 	
 	fn nodes( &self ) -> Self::NodeIdxIterator {
@@ -130,8 +130,6 @@ impl<TNTRStrat : ExtendedNTRStrategy> RootedDynamicForest for StandardRootedDyna
 		let r = self.t.data( v ).desc_root.unwrap();
 
 		debug_assert!( r != v, "It seems you're trying to cut at the root." );
-
-		// TODO: Simple checks here?
 
 		// Find child of x with r in its subtree.
 		let mut x = r;

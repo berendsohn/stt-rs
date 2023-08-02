@@ -11,7 +11,7 @@ pub trait RootedDynamicForest {
 	type NodeIdxIterator : Iterator<Item = NodeIdx>;
 	
 	/// Creates a new dynamic forest with the specified number of nodes and no edges.
-	fn new( num_nodes : usize ) -> Self;
+	fn new( num_vertices : usize ) -> Self;
 
 	/// Iterate over the nodes in this dynamic forest.
 	fn nodes( &self ) -> Self::NodeIdxIterator;
@@ -118,8 +118,8 @@ impl SimpleRootedForest {
 impl RootedDynamicForest for SimpleRootedForest {
 	type NodeIdxIterator = Map<Range<usize>, fn(usize) -> NodeIdx>;
 	
-	fn new( num_nodes : usize ) -> Self {
-		SimpleRootedForest{ nodes : (0..num_nodes).map( |_| SimpleRootedNode::new() ).collect() }
+	fn new( num_vertices : usize ) -> Self {
+		SimpleRootedForest{ nodes : (0..num_vertices).map( |_| SimpleRootedNode::new() ).collect() }
 	}
 	
 	fn nodes( &self ) -> Self::NodeIdxIterator {
