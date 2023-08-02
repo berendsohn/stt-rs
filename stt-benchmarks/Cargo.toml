@@ -11,6 +11,7 @@ lto = true
 stt = { version = "0.1", path = "../stt", features  = ["generate", "petgraph"] }
 
 clap = { version = "4.0", features = ["derive"] }
+indexmap = "2.0.0"
 itertools = "0.10.5"
 json = "0.12.4"
 num-traits = "0.2"

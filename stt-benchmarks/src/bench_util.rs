@@ -438,3 +438,21 @@ macro_rules! do_for_impl_rooted {
 		}
 	}
 }
+
+/// Call `$do_mac!( $obj, <type>, <name> )`, where `<name>` is the name of the implementation
+/// `$imp_enum`, and `<type>` is the empty dynamic tree type associated to `$imp_enum`.
+#[macro_export]
+macro_rules! do_for_impl_eversible_rooted {
+	( $imp_enum : ident, $do_mac : ident, $obj : ident ) => {
+		{
+			match $imp_enum {
+				stt_benchmarks::bench_util::RootedImplDesc::LinkCut => $do_mac!( $obj, RootedLinkCutTreeWithEvert ),
+				stt_benchmarks::bench_util::RootedImplDesc::GreedySplay => $do_mac!( $obj, RootedGreedySplayTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::TwoPassSplay => $do_mac!( $obj, RootedTwoPassSplayTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::LocalTwoPassSplay => $do_mac!( $obj, RootedLocalTwoPassSplayTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::MoveToRoot => $do_mac!( $obj, RootedMoveToRootTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::Simple => $do_mac!( $obj, SimpleRootedForest )
+			}
+		}
+	}
+}

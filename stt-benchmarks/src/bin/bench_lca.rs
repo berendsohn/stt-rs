@@ -7,47 +7,61 @@ use std::process::exit;
 use std::time::{Duration, Instant};
 
 use clap::Parser;
+use indexmap::IndexSet;
 use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
 use stt::generate::generate_edge;
-use stt::link_cut::RootedLinkCutTree;
+use stt::link_cut::{RootedLinkCutTree, RootedLinkCutTreeWithEvert};
 use stt::NodeIdx;
-use stt::rooted::{RootedDynamicForest, SimpleRootedForest};
+use stt::rooted::{EversibleRootedDynamicForest, RootedDynamicForest, SimpleRootedForest};
 use stt::twocut::mtrtt::*;
 use stt::twocut::splaytt::*;
 
 use stt_benchmarks::bench_util::{ImplName, PrintType, RootedImplDesc};
 use stt_benchmarks::bench_util::PrintType::{Json, Print};
-use stt_benchmarks::do_for_impl_rooted;
+use stt_benchmarks::{do_for_impl_eversible_rooted, do_for_impl_rooted};
 
 use crate::Query::*;
 
 
 type DiEdge = (NodeIdx, NodeIdx);
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 enum Query {
 	Link( NodeIdx, NodeIdx ),
 	Cut( NodeIdx ),
-	CutEdge( NodeIdx, NodeIdx ),
-	LCA( NodeIdx, NodeIdx )
+	CutEdge( NodeIdx, NodeIdx ), // FIXME: Remove
+	LCA( NodeIdx, NodeIdx ),
+	Evert( NodeIdx )
 }
 
-fn generate_queries( num_vertices : usize, num_queries : usize, rng : &mut impl Rng, use_cut_edge : bool ) -> impl Iterator<Item=Query> + '_ {
-	let mut drf = RootedLinkCutTree::new( num_vertices );
-	let mut edges : Vec<DiEdge> = vec![];
+fn generate_queries( num_vertices : usize, num_queries : usize, rng : &mut impl Rng,
+		use_cut_edge : bool, allow_evert : bool ) -> impl Iterator<Item=Query> + '_ {
+	assert!( !use_cut_edge ); // FIXME
+	let mut drf = SimpleRootedForest::new( num_vertices );
+	let mut non_root_nodes : IndexSet<NodeIdx> = IndexSet::new();
 	(0..num_queries).map( move |_| {
-		if edges.len() > 0 && rng.gen_bool( 0.5 * ( edges.len() as f64 ) / ( (num_vertices - 1) as f64 ) ) {
-			// Delete some edge
-			let idx = rng.gen::<usize>() % edges.len();
-			let (u,v) = edges.swap_remove( idx );
-			// drf.cut_edge( u, v );
-			drf.cut( u );
-			if use_cut_edge {
-				CutEdge( u, v )
+		if non_root_nodes.len() > 0 && rng.gen_bool( 0.5 * ( non_root_nodes.len() as f64 ) / ( (num_vertices - 1) as f64 ) ) {
+			// Choose some non-root node
+			let idx = rng.gen::<usize>() % non_root_nodes.len();
+			let &v = non_root_nodes.get_index( idx ).unwrap();
+
+			if allow_evert && rng.gen_bool( 0.5 ) {
+				let old_root = drf.find_root( v );
+				assert_ne!( old_root, v );
+
+				drf.make_root( v );
+
+				non_root_nodes.swap_remove( &v );
+				non_root_nodes.insert( old_root );
+
+				Evert( v )
 			}
 			else {
-				Cut( u )
+				non_root_nodes.swap_remove( &v );
+				drf.cut( v );
+
+				Cut( v )
 			}
 		}
 		else {
@@ -64,7 +78,7 @@ fn generate_queries( num_vertices : usize, num_queries : usize, rng : &mut impl 
 			}
 			else {
 				drf.link( ur, v );
-				edges.push( (ur, v) );
+				non_root_nodes.insert( ur );
 				Link( ur, v )
 			}
 		}
@@ -154,9 +168,26 @@ impl Helper {
 		for &query in &self.input {
 			match query {
 				Link( u, v ) => drf.link( u, v ),
-				Cut( u ) => drf.cut( u ),
+				Cut( v ) => drf.cut( v ),
 				CutEdge( u, v ) => drf.cut_edge( u, v ),
-				LCA( u, v ) => { drf.lowest_common_ancestor( u, v ).expect( "LCA query failed" ); }
+				LCA( u, v ) => { drf.lowest_common_ancestor( u, v ).expect( "LCA query failed" ); },
+				Evert( _ ) => panic!( "Evert not supported!" )
+			}
+		}
+		let dur = start.elapsed();
+		self.report_test_result( impl_name, dur );
+	}
+
+	fn benchmark_fd_con_with_evert<TRDynForest : EversibleRootedDynamicForest>( &mut self, impl_name : &str ) {
+		let start = Instant::now();
+		let mut drf = TRDynForest::new( self.num_vertices );
+		for &query in &self.input {
+			match query {
+				Link( u, v ) => drf.link( u, v ),
+				Cut( v ) => drf.cut( v ),
+				CutEdge( u, v ) => drf.cut_edge( u, v ),
+				LCA( u, v ) => { drf.lowest_common_ancestor( u, v ).expect( "LCA query failed" ); },
+				Evert( v ) => drf.make_root( v )
 			}
 		}
 		let dur = start.elapsed();
@@ -171,8 +202,19 @@ macro_rules! do_benchmark {
 	}
 }
 
-fn benchmark( imp : RootedImplDesc, helper : &mut Helper ) {
-	do_for_impl_rooted!( imp, do_benchmark, helper )
+macro_rules! do_benchmark_with_evert {
+	( $obj : ident, $impl_tpl : ident ) => {
+		$obj.benchmark_fd_con_with_evert::<$impl_tpl>( <$impl_tpl as ImplName>::name() )
+	}
+}
+
+fn benchmark( imp : RootedImplDesc, helper : &mut Helper, with_evert :  bool ) {
+	if with_evert {
+		do_for_impl_eversible_rooted!( imp, do_benchmark_with_evert, helper )
+	}
+	else {
+		do_for_impl_rooted!( imp, do_benchmark, helper )
+	}
 }
 
 
@@ -190,6 +232,9 @@ struct CLI {
 	/// Read input graph from the given file (ignore -n, -q, --seed)
 	#[arg(short, long, required = false)]
 	input : Option<PathBuf>,
+
+	#[arg(short='e', long)]
+	allow_evert : bool,
 
 	/// Use the cut_edge() method instead of cut() (puts STT implementation at an (unfair) advantage)
 	#[arg(long)]
@@ -228,10 +273,11 @@ fn main() {
 	let num_vertices : usize;
 	let input : Vec<Query>;
 
-	// Read edges // TODO: Remove if unused!
+	// Read queries // TODO: Remove if unused!
 	if let Some( input_path ) = &cli.input {
+		assert!( !cli.allow_evert, "Reading queries with evert from input not supported" ); // TODO?
 		if cli.print {
-			println!( "Reading edges from '{}'", input_path.display() );
+			println!( "Reading queries from '{}'", input_path.display() );
 		}
 		match read_lca_file( input_path ) {
 			Ok( ( n, i ) ) => { num_vertices = n; input = i },
@@ -242,14 +288,14 @@ fn main() {
 		}
 
 		if cli.print {
-			println!( " Done reading {} edges on {num_vertices} vertices.", input.len() );
+			println!( " Done reading {} queries on {num_vertices} vertices.", input.len() );
 		}
 	}
 	else {
 		let mut rng = StdRng::seed_from_u64( cli.seed );
 		num_vertices = cli.num_vertices;
 
-		// Generate edges
+		// Generate queries
 		if cli.print {
 			println!( "Generating {} queries on {num_vertices} vertices. Seed: {}.", cli.num_queries, cli.seed );
 			if cli.cut_edge {
@@ -257,7 +303,7 @@ fn main() {
 			}
 			stdout().flush().expect( "Couldn't flush for some reason" );
 		}
-		input = generate_queries( num_vertices, cli.num_queries, &mut rng, cli.cut_edge ).collect();
+		input = generate_queries( num_vertices, cli.num_queries, &mut rng, cli.cut_edge, cli.allow_evert ).collect();
 
 		if cli.print {
 			println!( " Done." );
@@ -267,13 +313,14 @@ fn main() {
 	if cli.print {
 		let num_links = input.iter().filter( |q| matches!( q, Link( _, _ ) ) ).count();
 		let num_cuts = input.iter().filter( |q| matches!( q, CutEdge( _, _ ) ) || matches!( q, Cut( _ ) ) ).count();
-		let num_lcas = input.len() - num_links - num_cuts;
-		println!( "Benchmarking input with {num_links} links, {num_cuts} cuts and {num_lcas} LCA queries." );
+		let num_everts = input.iter().filter( |q| matches!( q, Evert( _ ) ) ).count();
+		let num_lcas = input.len() - num_links - num_cuts - num_everts;
+		println!( "Benchmarking input with {num_links} links, {num_cuts} cuts, {num_everts} everts and {num_lcas} LCA queries." );
 	}
 
 	let mut helper = Helper::new( num_vertices, input, print );
 
 	for imp in &impls {
-		benchmark( *imp, &mut helper );
+		benchmark( *imp, &mut helper, cli.allow_evert );
 	}
 }
