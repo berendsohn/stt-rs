@@ -90,6 +90,8 @@ impl<TRDynTree : RootedDynamicForest + Clone> TestRootedDynamicForest<TRDynTree>
 		self.df.cut( v );
 		self.df_ref.cut( v );
 
+		// println!( "Ref after cut:\n{}", self.df_ref.to_string() );
+
 		assert_eq!( v, self.df.find_root( v ) );
 	}
 
@@ -106,9 +108,11 @@ impl<TRDynTree : RootedDynamicForest + Clone> TestRootedDynamicForest<TRDynTree>
 			self.df.link( u_root, v );
 			self.df_ref.link( u_root, v );
 
+			// println!( "Ref after link:\n{}", self.df_ref.to_string() );
+
 			// Check
 			let mut df_copy = self.df.clone();
-			assert_eq!( df_copy.find_root( v ), self.df_ref.find_root( v ) );
+			assert_eq!( self.df_ref.find_root( v ), df_copy.find_root( v ) );
 		}
 	}
 }
