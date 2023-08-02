@@ -67,6 +67,11 @@ impl SimpleRootedForest {
 		&mut self.nodes[v.index()]
 	}
 
+	/// Returns the parent of the given node in the underlying tree
+	pub fn get_parent( &self, v : NodeIdx ) -> Option<NodeIdx> {
+		self.node( v ).parent
+	}
+
 	/// Produces a multi-line string representation of the forest
 	pub fn to_string( &self ) -> String {
 		let mut s = String::new();
@@ -138,6 +143,7 @@ impl RootedDynamicForest for SimpleRootedForest {
 	}
 	
 	fn cut( &mut self, v : NodeIdx ) {
+		debug_assert!( self.node( v ).parent.is_some() );
 		self.node_mut( v ).parent = None;
 	}
 	
