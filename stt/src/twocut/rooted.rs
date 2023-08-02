@@ -155,15 +155,6 @@ impl<TNTRStrat : ExtendedNTRStrategy> RootedDynamicForest for StandardRootedDyna
 		return;
 	}
 	
-	fn cut_edge( &mut self, u : NodeIdx, v : NodeIdx) {
-		TNTRStrat::node_to_root( self, v );
-		TNTRStrat::node_below_root( self, u );
-		debug_assert!( self.t.get_direct_separator_child( u ).is_none(), "It seems you're trying to cut a non-existing edge ({u}, {v})." );
-		debug_assert_eq!( self.t.get_parent( u ), Some( v ), "It seems you're trying to cut a non-existing edge ({u}, {v}). The two nodes are not even in the same tree." );
-
-		self.t.detach( u );
-	}
-	
 	fn find_root( &mut self, v : NodeIdx ) -> NodeIdx {
 		TNTRStrat::node_to_root( self, v );
 		self.t.data( v ).desc_root.unwrap()

@@ -801,24 +801,6 @@ impl<const IMPL_EVERT : bool> RootedDynamicForest for LinkCutForest<EmptyNodeDat
 		self.node_mut( underlying_parent ).parent = None;
 	}
 	
-	fn cut_edge( &mut self, u : NodeIdx, v : NodeIdx ) {
-		if LOG_VERBOSE { println!( "CUT_EDGE({u}, {v})" ); }
-		self.node_to_root( u );
-		self.node_to_root( v );
-		assert!( self.node( u ).parent.is_some(), "Apparently attempting to cut nodes in different components" );
-		debug_assert!( self.node( u ).parent == Some( v ) );
-		
-		self.node_mut( u ).parent = None;
-		if self.node( v ).left_child == Some( u ) {
-			self.node_mut( v ).left_child = None;
-		}
-		else if self.node( v ).right_child == Some( u ) {
-			self.node_mut( v ).right_child = None;
-		}
-		
-		if LOG_VERBOSE { println!( "{}", self.to_string() ) }
-	}
-	
 	fn find_root( &mut self, v : NodeIdx ) -> NodeIdx {
 		self.node_to_root( v );
 		let mut r = v;

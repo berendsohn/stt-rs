@@ -22,11 +22,6 @@ pub trait RootedDynamicForest {
 
 	/// Removes `u` from its parent. `u` must have a parent.
 	fn cut( &mut self, v : NodeIdx );
-
-	/// Removes the edge between `u` and `v`. `u` must be a child of `v`.
-	/// 
-	/// Note: Supplying the parent (`u`) makes this function much easier for STT-based implementations
-	fn cut_edge( &mut self, u : NodeIdx, v : NodeIdx );
 	
 	/// Return the root of the tree containing `v`.
 	fn find_root( &mut self, v : NodeIdx ) -> NodeIdx;
@@ -145,11 +140,6 @@ impl RootedDynamicForest for SimpleRootedForest {
 	fn cut( &mut self, v : NodeIdx ) {
 		debug_assert!( self.node( v ).parent.is_some() );
 		self.node_mut( v ).parent = None;
-	}
-	
-	fn cut_edge( &mut self, u: NodeIdx, v: NodeIdx ) {
-		debug_assert!( self.node( u ).parent == Some( v ) );
-		self.cut( u );
 	}
 	
 	fn find_root( &mut self, v : NodeIdx ) -> NodeIdx {
