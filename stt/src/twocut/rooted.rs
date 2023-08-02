@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 
 use crate::{NodeData, NodeDataAccess, NodeIdx, RootedForest};
 use crate::common::EmptyGroupWeight;
-use crate::rooted::RootedDynamicForest;
+use crate::rooted::{EversibleRootedDynamicForest, RootedDynamicForest};
 use crate::twocut::ExtendedNTRStrategy;
 use crate::twocut::basic::{MakeOneCutSTT, STT, STTRotate, STTStructureRead};
 
@@ -195,5 +195,20 @@ impl<TNTRStrat : ExtendedNTRStrategy> RootedDynamicForest for StandardRootedDyna
 			// Root is below u, nothing between u and v
 			Some( u )
 		}
+	}
+}
+
+impl<TNTRStrat : ExtendedNTRStrategy> EversibleRootedDynamicForest for StandardRootedDynamicForest<TNTRStrat> {
+	fn make_root( &mut self, v : NodeIdx ) {
+		TNTRStrat::node_to_root( self, v );
+		let r = self.t.data( v ).desc_root.unwrap(); // Old root of the underlying tree
+		let mut x = r;
+		while let Some( p ) = self.get_parent( x ) {
+			self.t.data_mut( x ).desc_root = None; // Delete references to old root
+			x = p;
+		}
+		debug_assert!( x == v );
+		self.t.data_mut( v ).desc_root = Some( v );
+		TNTRStrat::node_to_root( self, r ); // Performance
 	}
 }

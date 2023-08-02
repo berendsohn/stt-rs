@@ -36,6 +36,12 @@ pub trait RootedDynamicForest {
 	fn lowest_common_ancestor( &mut self, u : NodeIdx, v : NodeIdx ) -> Option<NodeIdx>;
 }
 
+/// An unweighted rooted dynamic forest which allows changing the root.
+pub trait EversibleRootedDynamicForest : RootedDynamicForest {
+	/// Makes `u` the root of the underlying forest
+	fn make_root( &mut self, v : NodeIdx );
+}
+
 
 struct SimpleRootedNode {
 	parent : Option<NodeIdx>
@@ -175,5 +181,21 @@ impl RootedDynamicForest for SimpleRootedForest {
 		}
 		
 		return None;
+	}
+}
+
+impl EversibleRootedDynamicForest for SimpleRootedForest {
+	fn make_root( &mut self, v : NodeIdx ) {
+		if let Some( p ) = self.node( v ).parent {
+			self.node_mut( v ).parent = None;
+			let mut x = v; // First node of remaining path
+			let mut y = p; // Second node of remaining path
+			while let Some( p ) = self.node( y ).parent {
+				self.node_mut( y ).parent = Some( x );
+				x = y;
+				y = p;
+			}
+			self.node_mut( y ).parent = Some( x );
+		}
 	}
 }

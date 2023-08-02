@@ -1,8 +1,8 @@
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
-use stt::link_cut::RootedLinkCutTree;
+use stt::link_cut::{RootedLinkCutTree, RootedLinkCutTreeWithEvert};
 use stt::{generate, NodeIdx};
-use stt::rooted::{RootedDynamicForest, SimpleRootedForest};
+use stt::rooted::{EversibleRootedDynamicForest, RootedDynamicForest, SimpleRootedForest};
 use stt::twocut::mtrtt::MoveToRootStrategy;
 use stt::twocut::rooted::StandardRootedDynamicForest;
 use stt::twocut::splaytt::{GreedySplayStrategy, LocalTwoPassSplayStrategy, TwoPassSplayStrategy};
@@ -29,6 +29,7 @@ fn lca( df : &mut impl RootedDynamicForest, u : usize, v : usize ) -> Option<usi
 fn test() {
 	test_basic_for::<SimpleRootedForest>();
 	test_basic_for::<RootedLinkCutTree>();
+	test_basic_for::<RootedLinkCutTreeWithEvert>();
 	test_basic_for::<StandardRootedDynamicForest<GreedySplayStrategy>>();
 	test_basic_for::<StandardRootedDynamicForest<TwoPassSplayStrategy>>();
 	test_basic_for::<StandardRootedDynamicForest<LocalTwoPassSplayStrategy>>();
@@ -39,6 +40,12 @@ fn test() {
 	test_against_simple::<StandardRootedDynamicForest<TwoPassSplayStrategy>>();
 	test_against_simple::<StandardRootedDynamicForest<LocalTwoPassSplayStrategy>>();
 	test_against_simple::<StandardRootedDynamicForest<MoveToRootStrategy>>();
+
+	test_against_simple_eversible::<RootedLinkCutTreeWithEvert>();
+	test_against_simple_eversible::<StandardRootedDynamicForest<GreedySplayStrategy>>();
+	test_against_simple_eversible::<StandardRootedDynamicForest<TwoPassSplayStrategy>>();
+	test_against_simple_eversible::<StandardRootedDynamicForest<LocalTwoPassSplayStrategy>>();
+	test_against_simple_eversible::<StandardRootedDynamicForest<MoveToRootStrategy>>();
 }
 
 fn test_basic_for<TRDynTree : RootedDynamicForest>() {
@@ -117,6 +124,14 @@ impl<TRDynTree : RootedDynamicForest + Clone> TestRootedDynamicForest<TRDynTree>
 	}
 }
 
+impl<TRDynTree : EversibleRootedDynamicForest + Clone> TestRootedDynamicForest<TRDynTree> {
+	fn test_evert( &mut self, v : NodeIdx ) {
+		self.df.make_root( v );
+		self.df_ref.make_root( v );
+		assert_eq!( v, self.df.clone().find_root( v ) );
+	}
+}
+
 fn test_against_simple<TRDynTree : RootedDynamicForest + Clone>() {
 	let mut rng = StdRng::seed_from_u64( 0 );
 	let num_vertices = 100;
@@ -137,6 +152,38 @@ fn test_against_simple<TRDynTree : RootedDynamicForest + Clone>() {
 			}
 		}
 		else {
+			// Link or lca
+			let (u,v) = generate::generate_edge( num_vertices, &mut rng );
+			let u = NodeIdx::new( u );
+			let v = NodeIdx::new( v );
+			tdf.test_link_or_lca( u, v );
+		}
+	}
+}
+
+fn test_against_simple_eversible<TRDynTree : EversibleRootedDynamicForest + Clone>() {
+	let mut rng = StdRng::seed_from_u64( 1 );
+	let num_vertices = 100;
+	let num_queries = 1000;
+
+	let mut tdf : TestRootedDynamicForest<TRDynTree> = TestRootedDynamicForest::new( num_vertices );
+
+	for _ in 0..num_queries {
+		if rng.gen_bool( 0.2 ) { // 20% chance
+			// Just find root
+			tdf.test_find_root( NodeIdx::new( rng.gen_range( 0..num_vertices ) ) );
+		}
+		else if rng.gen_bool( 0.25 ) { // 20% chance
+			tdf.test_evert( NodeIdx::new( rng.gen_range( 0..num_vertices ) ) );
+		}
+		else if rng.gen_bool( 0.5 ) { // 30% chance
+			// Try cutting
+			let v = NodeIdx::new( rng.gen_range( 0..num_vertices ) );
+			if v != tdf.df_ref.find_root( v ) {
+				tdf.test_cut( v );
+			}
+		}
+		else { // 30% chance
 			// Link or lca
 			let (u,v) = generate::generate_edge( num_vertices, &mut rng );
 			let u = NodeIdx::new( u );

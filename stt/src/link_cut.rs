@@ -22,7 +22,7 @@ use std::ops::Range;
 use crate::{DynamicForest, MonoidWeight, NodeData, NodeDataAccess, NodeIdx, PathWeightNodeData, RootedForest};
 use crate::common::{EmptyNodeData, GroupWeight, WeightOrInfinity};
 use crate::common::WeightOrInfinity::{Finite, Infinite};
-use crate::rooted::RootedDynamicForest;
+use crate::rooted::{EversibleRootedDynamicForest, RootedDynamicForest};
 
 /// Enable or disable logging
 const LOG_VERBOSE : bool = cfg!( feature = "verbose_lc" );
@@ -42,6 +42,9 @@ pub type MonoidLinkCutTree<TWeight> = LinkCutForest<MonoidPathWeightLCTNodeData<
 
 /// Link-cut tree that maintains a rooted forest without edge weights
 pub type RootedLinkCutTree = LinkCutForest<EmptyNodeData, false>;
+
+/// Link-cut tree that maintains a rooted forest without edge weights, and allows root changing
+pub type RootedLinkCutTreeWithEvert = LinkCutForest<EmptyNodeData, true>;
 
 
 /// Node data for link-cut trees.
@@ -767,7 +770,7 @@ impl<TWeight : GroupWeight> LCTNodeData<true> for GroupPathWeightLCTNodeData<TWe
 }
 
 
-impl RootedDynamicForest for LinkCutForest<EmptyNodeData, false> {
+impl<const IMPL_EVERT : bool> RootedDynamicForest for LinkCutForest<EmptyNodeData, IMPL_EVERT> {
 	type NodeIdxIterator = Map<Range<usize>, fn(usize) -> NodeIdx>;
 	
 	fn new( num_vertices : usize ) -> Self {
@@ -862,6 +865,12 @@ impl RootedDynamicForest for LinkCutForest<EmptyNodeData, false> {
 		self.node_to_root( v ); // Only for amortized analysis
 		
 		Some( lca )
+	}
+}
+
+impl EversibleRootedDynamicForest for LinkCutForest<EmptyNodeData, true> {
+	fn make_root( &mut self, v : NodeIdx ) {
+		self.evert( v );
 	}
 }
 
