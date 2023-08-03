@@ -198,7 +198,7 @@ struct CLI {
 	#[arg(short, long, group = "input")]
 	seed : Option<u64>,
 	
-	/// Implementations to benchmark. Include all if omitted.
+	/// Implementations to benchmark. Include all but petgraph if omitted.
 	impls : Vec<ImplDesc>
 }
 
@@ -214,7 +214,7 @@ fn main() {
 		impls = cli.impls;
 	}
 	else {
-		impls = ImplDesc::all()
+		impls = ImplDesc::all_efficient()
 	}
 
 	let num_vertices : usize;

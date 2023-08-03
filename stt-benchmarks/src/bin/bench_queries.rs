@@ -241,7 +241,7 @@ struct CLI {
 	#[arg(short, long, default_value_t = WeightType::Empty)]
 	weight : WeightType,
 	
-	/// Implementations to benchmark. Include all if omitted.
+	/// Implementations to benchmark. Include all but petgraph if omitted.
 	impls : Vec<ImplDesc>
 }
 
@@ -262,7 +262,7 @@ fn main() {
 		impls = cli.impls;
 	}
 	else {
-		impls = ImplDesc::all()
+		impls = ImplDesc::all_efficient()
 	}
 	
 	match cli.weight {

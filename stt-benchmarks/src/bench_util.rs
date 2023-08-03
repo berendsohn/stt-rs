@@ -220,8 +220,17 @@ pub enum ImplDesc {
 }
 
 impl ImplDesc {
+	/// A list of all available implementations.
 	pub fn all() -> Vec<ImplDesc> {
 		vec![ImplDesc::PetgraphDynamic, ImplDesc::LinkCut, ImplDesc::GreedySplay,
+			ImplDesc::StableGreedySplay, ImplDesc::TwoPassSplay, ImplDesc::StableTwoPassSplay,
+			ImplDesc::LocalTwoPassSplay, ImplDesc::LocalStableTwoPassSplay, ImplDesc::MoveToRoot,
+			ImplDesc::StableMoveToRoot, ImplDesc::OneCut]
+	}
+
+	/// A list of all available implementations except the (very slow) petgraph implementation
+	pub fn all_efficient() -> Vec<ImplDesc> {
+		vec![ImplDesc::LinkCut, ImplDesc::GreedySplay,
 			ImplDesc::StableGreedySplay, ImplDesc::TwoPassSplay, ImplDesc::StableTwoPassSplay,
 			ImplDesc::LocalTwoPassSplay, ImplDesc::LocalStableTwoPassSplay, ImplDesc::MoveToRoot,
 			ImplDesc::StableMoveToRoot, ImplDesc::OneCut]
