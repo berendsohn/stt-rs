@@ -18,23 +18,34 @@ fn link_with_weight(f : &mut impl DynamicForest<TWeight = UsizeMaxMonoidWeightWi
 
 
 /// Compute the minimum spanning tree of the given edges, online.
-/// 
+///
 /// `f` may already contain edges, which are assumed to be a starting MST.
-pub fn compute_mst<TDynForest>( f : &mut TDynForest, edges : impl Iterator<Item=EdgeWithWeight> )
+///
+/// If `allow_multi_edges` is `true`, edges may appear multiple times in the input.
+pub fn compute_mst<TDynForest>( f : &mut TDynForest, edges : impl Iterator<Item=EdgeWithWeight>,
+		allow_multi_edges : bool )
 		-> Vec<(NodeIdx, NodeIdx)>
 	where TDynForest : DynamicForest<TWeight = UsizeMaxMonoidWeightWithMaxEdge>
 {
 	for (u, v, uv_weight) in edges {
 		let u = NodeIdx::new( u );
 		let v = NodeIdx::new( v );
+
 		let path_weight = f.compute_path_weight( u, v );
 		if LOG_VERBOSE { println!( "Processing edge ({u}, {v}) with weight {uv_weight}")}
 		if let Some( path_weight ) = path_weight {
 			if uv_weight < path_weight.weight().value() {
-				// If there is a heavier edge on the path, swap it with {u,v}
-				let (x, y) = path_weight.unwrap_edge();
-				f.cut( x, y );
-				link_with_weight( f, u, v, uv_weight );
+				if allow_multi_edges && f.get_edge_weight( u, v ).is_some() {
+					// Edge {u,v} already exists with heavier weight
+					f.cut( u, v );
+					link_with_weight( f, u, v, uv_weight );
+				}
+				else {
+					// If there is a heavier edge on the path, swap it with {u,v}
+					let (x, y) = path_weight.unwrap_edge();
+					f.cut( x, y );
+					link_with_weight( f, u, v, uv_weight );
+				}
 			}
 			// Otherwise, {u,v} is to heavy to be of any use.
 		}

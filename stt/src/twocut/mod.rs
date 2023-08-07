@@ -164,7 +164,7 @@ impl<TNodeData, TNTRImpl, TCPWImpl> DynamicForest for StandardDynamicForest<TNod
 	
 	fn cut( &mut self, u: NodeIdx, v: NodeIdx ) {
 		// println!( "Cutting #{u} – #{v}" );
-		TNTRImpl::edge_to_top(self, v, u );
+		TNTRImpl::edge_to_top( self, v, u );
 		assert!( self.t.get_direct_separator_child( u ).is_none(), "It seems you're trying to cut a non-existing edge ({u}, {v})." );
 		assert_eq!( self.t.get_parent( u ), Some( v ), "It seems you're trying to cut a non-existing edge ({u}, {v}). The two nodes are not even in the same tree." );
 		TNodeData::before_detached( &mut self.t, u );
@@ -174,7 +174,18 @@ impl<TNodeData, TNTRImpl, TCPWImpl> DynamicForest for StandardDynamicForest<TNod
 	fn compute_path_weight( &mut self, u : NodeIdx, v : NodeIdx ) -> Option<TNodeData::TWeight> {
 		TCPWImpl::compute_path_weight( self, u, v )
 	}
-	
+
+	fn get_edge_weight( &mut self, u : NodeIdx, v: NodeIdx) -> Option<Self::TWeight> {
+		TNTRImpl::edge_to_top( self, v, u ); // Make u child of v
+		if self.t.get_parent( u ) == Some( v )
+				&& self.t.get_direct_separator_child( u ).is_none() {
+			Some( self.t.data( u ).get_parent_path_weight() )
+		}
+		else {
+			None
+		}
+	}
+
 	fn nodes( &self ) -> Self::NodeIdxIterator {
 		self.t.nodes()
 	}

@@ -133,14 +133,17 @@ struct Helper {
 	input_edge_weights : HashMap<Edge, usize>,
 	verify : bool,
 	print : PrintType,
+	allow_multi_edges : bool,
 	verification_total_weight : Option<usize>,
 	verification_edges: Option<Vec<(usize, usize)>>
 }
 
 impl Helper {
-	fn new( num_vertices : usize, input_edges : Vec<EdgeWithWeight>, verify : bool, print : PrintType ) -> Helper {
+	fn new( num_vertices : usize, input_edges : Vec<EdgeWithWeight>, verify : bool,
+			print : PrintType, allow_multi_edges : bool ) -> Helper {
 		let mut h = Helper{ num_vertices, input_edges, input_edge_weights : HashMap::new(), verify,
-				print, verification_total_weight : None, verification_edges : None };
+				print, allow_multi_edges, verification_total_weight : None,
+				verification_edges : None };
 		for (u, v, weight) in &h.input_edges {
 			h.input_edge_weights.insert( (*u,*v),*weight );
 			h.input_edge_weights.insert( (*v,*u),*weight );
@@ -200,7 +203,7 @@ impl Helper {
 	{
 		let start = Instant::now();
 		let mut f = TDynForest::new( self.num_vertices );
-		let mst = compute_mst( &mut f, self.input_edges.iter().copied() );
+		let mst = compute_mst( &mut f, self.input_edges.iter().copied(), self.allow_multi_edges );
 		let dur = start.elapsed();
 		self.report_test_result( impl_name, dur );
 	
@@ -262,6 +265,10 @@ struct CLI {
 	/// Seed for the random graph generator.
 	#[arg(short, long, group = "input")]
 	seed : Option<u64>,
+
+	/// Allow inserting edges multiple times (with possibly different weights).
+	#[arg(short='m', long, default_value_t = false)]
+	allow_multi_edges : bool,
 	
 	/// Implementations to benchmark. Include all but petgraph if omitted.
 	impls : Vec<ImplDesc>
@@ -330,7 +337,8 @@ fn main() {
 		}
 	}
 	
-	let mut helper = Helper::new( num_vertices, input_edges, cli.verify, print );
+	let mut helper = Helper::new( num_vertices, input_edges, cli.verify, print,
+			cli.allow_multi_edges );
 	
 	helper.mst_petgraph( true );
 	for imp in &impls {

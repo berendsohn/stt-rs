@@ -86,6 +86,15 @@ impl<TDynForest : DynamicForest> DynamicTestForest<TDynForest> {
 	}
 
 	#[allow(dead_code)]
+	pub fn check_edge_weight( &mut self, u : usize, v : usize ) {
+		if self.verbose { println!( "Checking weight of edge (or none-edge) {u},{v}" ) }
+		let df_w = self.df.get_edge_weight( self.df_node( u ), self.df_node( v ) );
+		let g_w = self.g.find_edge( self.g_node( u ), self.g_node( v ) )
+				.map( |e| self.g.edge_weight( e ).copied().unwrap() );
+		assert_eq!( df_w, g_w );
+	}
+
+	#[allow(dead_code)]
 	pub fn df_compute_path_weight( &mut self, u : usize, v : usize ) -> Option<TDynForest::TWeight> {
 		self.df.compute_path_weight( self.df_node( u ), self.df_node( v ) )
 	}

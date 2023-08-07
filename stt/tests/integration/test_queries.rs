@@ -71,8 +71,12 @@ fn test_queries_for<TDynForest : DynamicForest>()
 		}
 
 		if g_edge.is_some() {
-			// Remove edge
-			dtf.remove_edge( u, v );
+			if rng.gen_bool( 0.5 ) {
+				dtf.remove_edge( u, v );
+			}
+			else {
+				dtf.check_edge_weight( u, v );
+			}
 		}
 		else if petgraph::algo::has_path_connecting( &dtf.g, u_g, v_g, None ) {
 			// Find some path from u to v
@@ -81,7 +85,12 @@ fn test_queries_for<TDynForest : DynamicForest>()
 
 			// Get the first edge on the path and remove it
 			let x_g : graph::NodeIndex = path[1];
-			dtf.remove_edge( u, x_g.index() );
+			if rng.gen_bool( 0.5 ) {
+				dtf.remove_edge( u, x_g.index() );
+			}
+			else {
+				dtf.check_edge_weight( u, x_g.index() );
+			}
 		}
 		else {
 			dtf.add_edge( u, v, TDynForest::TWeight::generate( &mut rng ) );

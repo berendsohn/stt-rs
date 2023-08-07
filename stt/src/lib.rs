@@ -239,6 +239,9 @@ pub trait DynamicForest {
 	/// Computes the weight of the path between u and v, or returns None if no such path exists.
 	fn compute_path_weight( &mut self, u : NodeIdx, v : NodeIdx ) -> Option<Self::TWeight>;
 
+	/// Returns the weight of the edges between u and v, or returns None if that edge doesn't exist.
+	fn get_edge_weight( &mut self, u : NodeIdx, v : NodeIdx ) -> Option<Self::TWeight>;
+
 	/// Iterate over the nodes in this dynamic forest.
 	fn nodes( &self ) -> Self::NodeIdxIterator;
 

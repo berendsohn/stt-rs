@@ -150,7 +150,19 @@ impl<TWeight : MonoidWeight> DynamicForest for SimpleDynamicTree<TWeight> {
 			None
 		}
 	}
-	
+
+	fn get_edge_weight( &mut self, u : NodeIdx, v : NodeIdx ) -> Option<Self::TWeight> {
+		if self.node( u ).parent == Some( v ) {
+			Some( self.data( u ).pdist.unwrap() )
+		}
+		else if self.node( v ).parent == Some( u ){
+			Some( self.data( v ).pdist.unwrap() )
+		}
+		else {
+			None
+		}
+	}
+
 	fn nodes( &self ) -> Self::NodeIdxIterator {
 		(0..self.nodes.len()).map( |i| NodeIdx::new( i ) )
 	}

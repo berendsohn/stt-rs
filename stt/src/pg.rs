@@ -64,7 +64,12 @@ impl<TWeight : MonoidWeight> DynamicForest for PetgraphDynamicForest<TWeight> {
 			None
 		}
 	}
-	
+
+	fn get_edge_weight(&mut self, u: NodeIdx, v: NodeIdx) -> Option<Self::TWeight> {
+		self.g.find_edge( conv_idx( u ), conv_idx( v ) )
+				.map( |e| self.g.edge_weight( e ).copied().unwrap() )
+	}
+
 	fn nodes( &self ) -> Self::NodeIdxIterator {
 		(0..self.g.node_count()).map( |i| NodeIdx::new( i ) )
 	}

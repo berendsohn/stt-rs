@@ -566,7 +566,29 @@ impl<TNodeData : LCTNodeData<IMPL_EVERT>, const IMPL_EVERT : bool> DynamicForest
 			None
 		}
 	}
-	
+
+	fn get_edge_weight( &mut self, u : NodeIdx, v : NodeIdx ) -> Option<Self::TWeight> {
+		if LOG_VERBOSE { println!( "GET_EDGE_WEIGHT({u}, {v})" ); }
+
+		self.node_to_root( u );
+		self.node_to_root( v );
+
+		if self.node( u ).parent == Some( v ) {
+			if self.node( v ).left_child == Some( u ) {
+				if self.node( u ).right_child != None {
+					return None // Something between u and v
+				}
+			}
+			else if self.node( v ).right_child == Some( u ) {
+				if self.node( u ).left_child != None {
+					return None // Something between u and v
+				}
+			}
+			return Some( self.data( u ).get_parent_path_weight() )
+		}
+		None
+	}
+
 	fn nodes( &self ) -> Self::NodeIdxIterator {
 		(0..self.nodes.len()).map( |i| NodeIdx::new( i ) )
 	}
