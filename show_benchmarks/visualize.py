@@ -49,7 +49,7 @@ def edge_factor( benchmark : JsonObj ) -> int :
 def validate_queries_quadratic( benchmarks : List[JsonObj] ) :
 	for benchmark in benchmarks :
 		if benchmark["num_queries"] != benchmark["num_vertices"] **2 :
-			print( f"WARNING: benchmark with m = {benchmark['num_edges']} and n = {benchmark['num_verices']}. m is not the square of n." )
+			print( f"WARNING: benchmark with m = {benchmark['num_queries']} and n = {benchmark['num_vertices']}. m is not the square of n." )
 
 def validate_vertices_constant( benchmarks : List[JsonObj] ) :
 	ns = {benchmark["num_vertices"] for benchmark in benchmarks}
