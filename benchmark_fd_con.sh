@@ -9,9 +9,9 @@ if [ "$1" != "--only-plot" ]; then
 
 	for n in 500 750 1000 1250 1500
 	do
-		let q=$n*$n
+		let q=$n*$n/2
 		echo "Benchmark fully-dynamic connectivity on $n vertices with $q queries"...
-		for _ in {1..5}
+		for _ in {1..20}
 		do
 			s=$RANDOM
 			echo "  seed=$s"

@@ -157,6 +157,9 @@ def TitleFixedEdgeFactor( tpl : str ) -> TitleFixedVal :
 def TitleFixedQueryFactor( tpl : str ) -> TitleFixedVal :
 	return TitleFixedVal( tpl, lambda b : b["num_queries"] // b["num_vertices"], "query factors" )
 
+def TitleFixedQueryFactorSquared( tpl : str ) -> TitleFixedVal :
+	return TitleFixedVal( tpl, lambda b : b["num_queries"] // b["num_vertices"] ** 2, "q/n² factors" )
+
 def TitleFixedGroupSizesAndQueries( tpl : str ) -> TitleFixedVal :
 	return TitleFixedVal( tpl, lambda b : ( b["group_size"], b["queries_per_group"] ), "group sizes/queries" )
 	
@@ -187,7 +190,7 @@ PROFILES = {
 			TitleFixedEdgeFactor( "Minimum Spanning forest (m/n = {})" ), lambda _ : True,
 			validate_edge_factor_constant, validate_edge_factor_int ),
 	"fd-con" : ( XNumVerts(), YMicrosPerQuery,
-			"Fully-dynamic connectivity (q=n²)", lambda _ : True, validate_queries_quadratic ),
+			TitleFixedQueryFactorSquared( "Fully-dynamic connectivity (q/n² = {})" ), lambda _ : True ),
 	"degenerate" : ( XNumVerts(), YMicrosPerVertex, "Degenerate queries", lambda _ : True ),
 	"degenerate-noisy" : ( XStdDev, YMillis, TitleFixedVertices( "Noisy degenerate queries (n = {})" ), lambda _ : True),
 	"queries-uniform" : ( XNumVerts( log_scale = False ),
