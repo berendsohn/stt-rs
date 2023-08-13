@@ -86,7 +86,7 @@ class XSimple :
 
 XStdDev = XSimple( "σ", "std_dev" )
 XNumGroups = XSimple( "#groups", "num_groups" )
-XPathProb = XSimple( "p", "path_query_prob")
+XPathProb = XSimple( "p = Prob. for compute_path_weight()", "path_query_prob")
 
 def XNumVerts( log_scale : bool = False ) -> XSimple :
 	return XSimple( "n", "num_vertices", log_scale )
@@ -157,8 +157,8 @@ def TitleFixedEdgeFactor( tpl : str ) -> TitleFixedVal :
 def TitleFixedQueryFactor( tpl : str ) -> TitleFixedVal :
 	return TitleFixedVal( tpl, lambda b : b["num_queries"] // b["num_vertices"], "query factors" )
 
-def TitleFixedQueryFactorSquared( tpl : str ) -> TitleFixedVal :
-	return TitleFixedVal( tpl, lambda b : b["num_queries"] // b["num_vertices"] ** 2, "q/n² factors" )
+def TitleFixedQueryDivisorSquared( tpl : str ) -> TitleFixedVal :
+	return TitleFixedVal( tpl, lambda b : b["num_vertices"] ** 2 // b["num_queries"], "n²/q factors" )
 
 def TitleFixedGroupSizesAndQueries( tpl : str ) -> TitleFixedVal :
 	return TitleFixedVal( tpl, lambda b : ( b["group_size"], b["queries_per_group"] ), "group sizes/queries" )
@@ -183,27 +183,27 @@ def plot_data( name : str, benchmark : Dict[int, List[int]], verbose : bool ) ->
 	return xs, ys, stdevs
 
 PROFILES = {
-	"mst-edge-factor" : ( XEdgeFactor, YMicrosPerEdge,
-			TitleFixedVertices( "Minimum Spanning forest (n = {})" ), lambda _ : True,
+	"mst-edge-factor" : ( XEdgeFactor, YMicrosPerEdge, TitleFixedVertices( "Minimum Spanning forest (n = {})" ),
 			validate_vertices_constant, validate_edge_factor_int ),
 	"mst-vertices" : ( XNumVerts( log_scale = True ), YMicrosPerEdge,
-			TitleFixedEdgeFactor( "Minimum Spanning forest (m/n = {})" ), lambda _ : True,
+			TitleFixedEdgeFactor( "Minimum Spanning forest (m/n = {})" ),
 			validate_edge_factor_constant, validate_edge_factor_int ),
 	"fd-con" : ( XNumVerts(), YMicrosPerQuery,
-			TitleFixedQueryFactorSquared( "Fully-dynamic connectivity (q/n² = {})" ), lambda _ : True ),
-	"degenerate" : ( XNumVerts(), YMicrosPerVertex, "Degenerate queries", lambda _ : True ),
-	"degenerate-noisy" : ( XStdDev, YMillis, TitleFixedVertices( "Noisy degenerate queries (n = {})" ), lambda _ : True),
+			TitleFixedQueryDivisorSquared( "Fully-dynamic connectivity (q = n²/{})" )),
+	"degenerate" : ( XNumVerts(), YMicrosPerVertex, "Degenerate queries" ),
+	"degenerate-noisy" : ( XStdDev, YMillis, TitleFixedVertices( "Noisy degenerate queries (n = {})" ) ),
 	"queries-uniform" : ( XNumVerts( log_scale = False ),
-			YMicrosPerQuery, TitleFixedQueryFactor( "Uniform random queries (q/n = {})" ), lambda _ : True ),
+			YMicrosPerQuery, TitleFixedQueryFactor( "Uniformly random queries (q/n = {})" ) ),
 	"queries-path-prob" : ( XPathProb, YMicrosPerQuery,
-			TitleFixedVal( "Random queries (n = {}, q = {})", lambda b : ( b["num_vertices"], b["num_queries"] ), "vertices/queries" ),
-			lambda _ : True ),
+			TitleFixedVal( "Random queries (n = {}, q = {})", lambda b : ( b["num_vertices"], b["num_queries"] ),
+					"vertices/queries" ) ),
 	"cache" : ( XNumGroups, YMicrosPerQuery,
-			TitleFixedGroupSizesAndQueries( "Cache (n/group = {}, q/group = {})" ), lambda _ : True ),
-	"lca" : ( XNumVerts( log_scale = False ),
-			YMicrosPerQuery, TitleFixedQueryFactor( "Uniform LCA queries (q/n = {})" ), lambda _ : True ),
-	"num_rotations" : ( XNumVerts(), YRotationsPerQuery,
-			"Rotation count (q=n²)", lambda _ : True, validate_queries_quadratic )
+			TitleFixedGroupSizesAndQueries( "Cache (n/group = {}, q/group = {})" ) ),
+	"lca" : ( XNumVerts( log_scale = True ),
+			YMicrosPerQuery, TitleFixedQueryFactor( "Uniformly LCA queries (q/n = {})" ) ),
+	"lca_evert" : ( XNumVerts( log_scale = True ),
+			YMicrosPerQuery, TitleFixedQueryFactor( "Uniformly LCA/Evert queries (q/n = {})" ) ),
+	"num_rotations" : ( XNumVerts(), YRotationsPerQuery, TitleFixedQueryFactor( "Rotation count (q/n={})" ) )
 }
 
 ALGORITHM_COLORS = {
@@ -237,7 +237,7 @@ def main() :
 	print( f"Drawing plot from {args.input_file} with profile {args.profile}..." )
 	
 	try :
-		x_profile, y_profile, title_profile, include_func, *validators = PROFILES[args.profile]
+		x_profile, y_profile, title_profile, *validators = PROFILES[args.profile]
 	except KeyError :
 		print( f"ERROR: Unknown profile '{args.profile}'" )
 		sys.exit( -1 )
@@ -246,7 +246,7 @@ def main() :
 		with open( args.input_file, "r" ) as fp :
 			benchmarks = [
 				b for line in fp for b in load_benchmarks( line )
-				if include_func( b["name"] ) and b["name"] not in (args.exclude or ())
+				if b["name"] not in (args.exclude or ())
 			]
 	except OSError as e :
 		sys.stderr.write( f"Could not open file '{args.input_file}': {e}\n" )
