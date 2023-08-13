@@ -1,20 +1,21 @@
 #!/bin/bash
 
+. util.sh
+
 DATA_FILE=degenerate.jsonl
-DRAWING_FILE=degenerate.pdf
+REPEAT=20
 
-if [ "$1" != "--only-plot" ]; then
-	mkdir -p results
-	rm -f results/$DATA_FILE
+mkdir -p results
+rm -f results/$DATA_FILE
 
-	for n in 10 20 50 100 200 500 1000 2000 5000 10000
-	do
-		echo "Benchmark degenerate queries with $n vertices"...
-		for _ in {1..5}
-		do
-			./stt-benchmarks/target/release/bench_degenerate -n $n --json link-cut greedy-splay stable-greedy-splay two-pass-splay stable-two-pass-splay local-two-pass-splay local-stable-two-pass-splay move-to-root stable-move-to-root one-cut >> results/$DATA_FILE || exit
-		done
-	done
-fi
-
-python3 show_benchmarks/visualize.py --input-file results/$DATA_FILE --profile degenerate --stdev --output-file results/$DRAWING_FILE
+for n in 100 200 500 1000 2000 5000 10000
+do
+    echo "Benchmark degenerate queries with $n vertices"...
+    progress_bar_start
+    for _ in $(eval echo {1..$REPEAT})
+    do
+        ./stt-benchmarks/target/release/bench_degenerate -n $n --json link-cut greedy-splay stable-greedy-splay two-pass-splay stable-two-pass-splay local-two-pass-splay local-stable-two-pass-splay move-to-root stable-move-to-root one-cut >> results/$DATA_FILE || exit
+        progress_bar_tick
+    done
+    progress_bar_end
+done

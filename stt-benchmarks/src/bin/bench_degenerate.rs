@@ -45,12 +45,12 @@ impl Helper {
 	fn benchmark_degenerate<TDynTree>( &mut self, impl_name : &str )
 		where TDynTree : DynamicForest<TWeight=EmptyGroupWeight>
 	{
-		let start = Instant::now();
 		let mut f = TDynTree::new( self.num_nodes + 1 );
 		for i in 0..(self.num_nodes-1) {
 			f.link( NodeIdx::new( i ), NodeIdx::new( i+1 ), EmptyGroupWeight::identity() );
 		}
 	
+		let start = Instant::now();
 		let last_node = NodeIdx::new( self.num_nodes-1 );
 		for i in 0..(self.num_nodes-1) {
 			f.compute_path_weight( self.generate_index( i ), last_node );
@@ -65,6 +65,7 @@ impl Helper {
 			println!( "{}", json::stringify( json::object!{
 				"type" : "degenerate",
 				num_vertices : self.num_nodes,
+				num_queries : self.num_nodes-1,
 				name : impl_name,
 				std_dev : self.std_dev,
 				time_ns : dur.as_nanos() as usize

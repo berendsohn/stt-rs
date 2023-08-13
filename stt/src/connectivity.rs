@@ -8,7 +8,10 @@ use crate::{DynamicForest, MonoidWeight, NodeIdx};
 type Edge = (NodeIdx, NodeIdx);
 
 
-/// A data structure maintaining a spanning forest on a graph under edge insertions and deletions
+/// A data structure maintaining a spanning forest on a graph under edge insertions and deletions.
+///
+/// Simplification of the naive fully-dynamic MSF algorithm sketched in Cattaneo, Faruolo, Petrillo, and Italiano
+/// ([2010](https://doi.org/10.1016/j.dam.2009.10.005)).
 pub struct FullyDynamicConnectivity<TDynForest>
 	where TDynForest : DynamicForest<TWeight = EmptyGroupWeight>
 {

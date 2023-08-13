@@ -1,7 +1,5 @@
 #!/bin/bash
 
-python3 -c "import matplotlib" &>/dev/null || echo "WARNING: python3 or matplotlib not found. Figures will not be generated."
-
 echo "Building benchmarks..."
 bash build_bench.sh
 
