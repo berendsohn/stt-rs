@@ -12,6 +12,8 @@ bash benchmark_mst.sh
 bash benchmark_lca.sh
 bash benchmark_lca_evert.sh
 
+bash benchmark_mst_ogbl_collab.sh
+
 if [[ $1 == "--all" ]]
     bash benchmark_num_rotations.sh
     bash benchmark_fd_con.sh

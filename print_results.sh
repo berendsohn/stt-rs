@@ -23,12 +23,17 @@ echo "Minimum spanning forest"
 python3 show_benchmarks/tabulate.py --input-file results/mst.jsonl --key num_vertices --value-unit us --value-per edge --decimal-places 2
 
 echo $DELIM
+echo "Minimum spanning forest (ogbl-collab dataset)"
+python3 show_benchmarks/tabulate.py --input-file results/mst_ogbl.jsonl --key num_vertices --value-unit us --value-per edge --decimal-places 2
+
+echo $DELIM
 echo "LCA"
 python3 show_benchmarks/tabulate.py --input-file results/lca.jsonl --key num_vertices --value-unit us --value-per query
 
 echo $DELIM
 echo "LCA/Evert"
 python3 show_benchmarks/tabulate.py --input-file results/lca_evert.jsonl --key num_vertices --value-unit us --value-per query
+
 
 echo $DELIM
 echo "Rotation count"

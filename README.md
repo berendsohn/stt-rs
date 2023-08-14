@@ -9,9 +9,9 @@ All benchmarks for the paper can be executed by running
 ./all_benchmarks.sh
 ```
 
-This will take a while. Results are written to the `results` directory.
+This will take a while. Results are written to the `results` directory. To execute the MSF benchmark on an input derived from the ogbl-collab data set (`benchmark_mst_ogbl_collab.sh`), the data set first has to be downloaded and processed as described in `data/ogbl-collab/README.md`.
 
-The benchmarks can be run individually using the `benchmark_*.sh` scripts. There are two additional benchmarks not used in the paper and not automatically executed by `all_benchmarks.sh`, namely `benchmark_num_rotations.sh` which compares the number of rotations the various STT-based implementations need, and `benchmark_fd_con.sh`, which 
+The benchmarks can be run individually using the `benchmark_*.sh` scripts. There are two additional benchmarks not used in the paper and not automatically executed by `all_benchmarks.sh`, namely `benchmark_num_rotations.sh` which compares the number of rotations the various STT-based implementations need, and `benchmark_fd_con.sh`, which tests a simple fully-dynamic connectivity scheme on all implementations.
 
 After running benchmarks, all benchmarks can be plotted in interactive windows (vai `mathplotlib`) using
 ```
