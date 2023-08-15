@@ -130,16 +130,10 @@ impl<TNTRStrat : ExtendedNTRStrategy> RootedDynamicForest for StandardRootedDyna
 		let r = self.t.data( v ).desc_root.unwrap();
 
 		debug_assert!( r != v, "It seems you're trying to cut at the root." );
-
-		// Find child of x with r in its subtree.
+		
+		TNTRStrat::node_below_root( self, r );
+		
 		let mut x = r;
-		while let Some( p ) = self.get_parent( x ) {
-			if p == v {
-				break;
-			}
-			x = p;
-		}
-
 		// Find parent of v in the underlying tree
 		if let Some( d ) = self.get_direct_separator_child( x ) {
 			x = d;
