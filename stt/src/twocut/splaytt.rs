@@ -40,14 +40,14 @@ pub type GroupTwoPassSplayTT<TWeight> = TwoPassSplayTT<GroupPathWeightNodeData<T
 /// A dynamic tree using [TwoPassSplayStrategy] without edge weights.
 pub type EmptyTwoPassSplayTT = TwoPassSplayTT<EmptyNodeData>;
 
-/// A dynamic tree using [StableTwoPassSplayStrategy].
+/// A dynamic tree using [TwoPassSplayStrategy], stable variant.
 pub type StableTwoPassSplayTT<TNodeData>
 	= StandardDynamicForest<TNodeData, StableNTRImplementation<TwoPassSplayStrategy>, StableNodesToTopPWImpl<TwoPassSplayStrategy>>;
-/// A dynamic tree using [StableTwoPassSplayStrategy] with monoid edge weights.
+/// A dynamic tree using [TwoPassSplayStrategy] with monoid edge weights, stable variant.
 pub type MonoidStableTwoPassSplayTT<TWeight> = StableTwoPassSplayTT<MonoidPathWeightNodeData<TWeight>>;
-/// A dynamic tree using [StableTwoPassSplayStrategy] with group edge weights.
+/// A dynamic tree using [TwoPassSplayStrategy] with group edge weights, stable variant.
 pub type GroupStableTwoPassSplayTT<TWeight> = StableTwoPassSplayTT<GroupPathWeightNodeData<TWeight>>;
-/// A dynamic tree using [StableTwoPassSplayStrategy] without edge weights.
+/// A dynamic tree using [TwoPassSplayStrategy] without edge weights, stable variant.
 pub type EmptyStableTwoPassSplayTT = StableTwoPassSplayTT<EmptyNodeData>;
 
 /// A rooted dynamic forest using [TwoPassSplayStrategy].
@@ -63,14 +63,14 @@ pub type GroupLocalTwoPassSplayTT<TWeight> = LocalTwoPassSplayTT<GroupPathWeight
 /// A dynamic tree using [LocalTwoPassSplayStrategy] without edge weights.
 pub type EmptyLocalTwoPassSplayTT = LocalTwoPassSplayTT<EmptyNodeData>;
 
-/// A dynamic tree using [StableLocalTwoPassSplayStrategy].
+/// A dynamic tree using [LocalTwoPassSplayStrategy], stable variant.
 pub type StableLocalTwoPassSplayTT<TNodeData>
 	= StandardDynamicForest<TNodeData, StableNTRImplementation<LocalTwoPassSplayStrategy>, StableNodesToTopPWImpl<LocalTwoPassSplayStrategy>>;
-/// A dynamic tree using [StableLocalTwoPassSplayStrategy] with monoid edge weights.
+/// A dynamic tree using [LocalTwoPassSplayStrategy] with monoid edge weights, stable variant.
 pub type MonoidStableLocalTwoPassSplayTT<TWeight> = StableLocalTwoPassSplayTT<MonoidPathWeightNodeData<TWeight>>;
-/// A dynamic tree using [StableLocalTwoPassSplayStrategy] with group edge weights.
+/// A dynamic tree using [LocalTwoPassSplayStrategy] with group edge weights, stable variant.
 pub type GroupStableLocalTwoPassSplayTT<TWeight> = StableLocalTwoPassSplayTT<GroupPathWeightNodeData<TWeight>>;
-/// A dynamic tree using [StableLocalTwoPassSplayStrategy] without edge weights.
+/// A dynamic tree using [LocalTwoPassSplayStrategy] without edge weights, stable variant.
 pub type EmptyStableLocalTwoPassSplayTT = StableLocalTwoPassSplayTT<EmptyNodeData>;
 
 /// A rooted dynamic forest using [LocalTwoPassSplayStrategy].
