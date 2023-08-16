@@ -115,7 +115,7 @@ fn read_lca_file( path : &PathBuf ) -> io::Result<(usize, Vec<Query>)> {
 					let (u,v) = e;
 					match parts[0] {
 						"l" => queries.push( Link( u, v ) ),
-						"c" => queries.push( Cut( u ) ), // TODO
+						"c" => queries.push( Cut( u ) ),
 						_ => queries.push( LCA( u, v ) )
 					}
 					continue
@@ -264,9 +264,9 @@ fn main() {
 	let num_vertices : usize;
 	let input : Vec<Query>;
 
-	// Read queries // TODO: Remove if unused!
+	// Read queries
 	if let Some( input_path ) = &cli.input {
-		assert!( !cli.allow_evert, "Reading queries with evert from input not supported" ); // TODO?
+		assert!( !cli.allow_evert, "Reading queries with evert from input not supported" );
 		if cli.print {
 			println!( "Reading queries from '{}'", input_path.display() );
 		}

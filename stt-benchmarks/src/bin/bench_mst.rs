@@ -116,7 +116,6 @@ fn read_mst( path : &PathBuf ) -> io::Result<(usize, Vec<EdgeWithWeight>)> {
 			}
 			return Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid line: '{line}'" ) ) );
 		}
-		// TODO: Allow decreasing weight
 		else if parts[0] == "c" {}
 		else {
 			return Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid line: '{line}'" ) ) );
