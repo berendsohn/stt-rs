@@ -348,52 +348,43 @@ pub struct LocalTwoPassSplayStrategy {}
 
 impl StableNTRStrategy for LocalTwoPassSplayStrategy {
 	fn node_to_root( f : &mut (impl STTRotate + STTStructureRead), v : NodeIdx ) {
-		loop {
-			if let Some( p ) = f.get_parent( v ) {
-				if let Some( g ) = f.get_parent( p ) {
-					if let Some( gg ) = f.get_parent( g ) {
-						let p_sep = f.is_separator_hint( p, g );
-						if !f.is_separator_hint( g, gg ) || ( p_sep && f.is_separator_hint( v, p ) ) {
-							// Can splay at v
-							splay_step( f, v, p );
-						}
-						else { // g is a separator, and one of v, p is not.
-							// We must move a branching node
-							if p_sep {
-								// p is a branching node
-								// Since g is a separator, we can definitely splay p
-								splay_step( f, p, g );
-							}
-							else {
-								// g is a branching node
-								// g3 (grandparent of g) must exist, since g is a separator
-								let g3 = f.get_parent( gg ).unwrap();
-								
-								if !f.is_separator( g3 ) || f.is_separator_hint( gg, g3 ) {
-									// g must be a separator, so we can splay at g
-									splay_step( f, g, gg );
-								}
-								else {
-									// g3 is a branching node
-									f.rotate( g );
-								}
-							}
-						}
+		while let Some( p ) = f.get_parent( v ) {
+			if let Some( g ) = f.get_parent( p ) {
+				let p_sep = f.is_separator_hint( p, g );
+				// Try splaying at v without information about g's separator status.
+				if f.is_separator_hint( v, p ) && p_sep {
+					splay_step( f, v, p );
+				}
+				// Either v or p is not a separator
+				else if let Some( gg ) = f.get_parent( g ) {
+					if !f.is_separator_hint( g, gg ) {
+						splay_step( f, v, p );
+					}
+					else if p_sep { // g_sep and p_sep => can splay at p
+						splay_step( f, p, g );
 					}
 					else {
-						// g is the root, so splaying at v must be possible
-						splay_step( f, v, p );
+						// g3 (grandparent of g) must exist, since g is a separator
+						let g3 = f.get_parent( gg ).unwrap();
+						
+						if f.is_separator_hint( gg, g3 ) || !f.is_separator( g3 ) {
+							// g must be a separator, so we can splay at g
+							splay_step( f, g, gg );
+						}
+						else {
+							// g3 is a branching node
+							f.rotate( g );
+						}
 					}
 				}
 				else {
-					// v has a parent, but no grandparent
-					f.rotate( v );
-					return
+					// g is root
+					splay_step( f, v, p );
 				}
 			}
 			else {
-				// v has no parent
-				return;
+				// p is root
+				f.rotate( v );
 			}
 		}
 	}
@@ -405,6 +396,7 @@ impl ExtendedNTRStrategy for LocalTwoPassSplayStrategy {
 	}
 
 	fn node_below_root( f : &mut (impl STTRotate + STTStructureRead ), v : NodeIdx ) {
+		// TODO
 		debug_assert!( f.get_parent( v ).is_some() );
 		loop {
 			let p = f.get_parent( v ).unwrap();
