@@ -11,6 +11,7 @@ num-traits = "0.2"
 nonmax = { version = "0.5.3", optional = true }
 petgraph = { version = "0.6.2", optional = true }
 rand = { version = "0.8", optional = true }
+portrait = "0.3.0"
 
 [dev-dependencies]
 petgraph = "0.6.2"

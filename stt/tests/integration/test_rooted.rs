@@ -4,7 +4,7 @@ use stt::link_cut::{RootedLinkCutTree, RootedLinkCutTreeWithEvert};
 use stt::{generate, NodeIdx};
 use stt::rooted::{EversibleRootedDynamicForest, RootedDynamicForest, SimpleRootedForest};
 use stt::twocut::mtrtt::MoveToRootStrategy;
-use stt::twocut::rooted::StandardRootedDynamicForest;
+use stt::twocut::rooted::{StableRootedDynamicForest, StandardRootedDynamicForest};
 use stt::twocut::splaytt::{GreedySplayStrategy, LocalTwoPassSplayStrategy, TwoPassSplayStrategy};
 
 // Helper functions
@@ -34,18 +34,30 @@ fn test() {
 	test_basic_for::<StandardRootedDynamicForest<TwoPassSplayStrategy>>();
 	test_basic_for::<StandardRootedDynamicForest<LocalTwoPassSplayStrategy>>();
 	test_basic_for::<StandardRootedDynamicForest<MoveToRootStrategy>>();
+	test_basic_for::<StableRootedDynamicForest<GreedySplayStrategy>>();
+	test_basic_for::<StableRootedDynamicForest<TwoPassSplayStrategy>>();
+	test_basic_for::<StableRootedDynamicForest<LocalTwoPassSplayStrategy>>();
+	test_basic_for::<StableRootedDynamicForest<MoveToRootStrategy>>();
 
 	test_against_simple::<RootedLinkCutTree>();
 	test_against_simple::<StandardRootedDynamicForest<GreedySplayStrategy>>();
 	test_against_simple::<StandardRootedDynamicForest<TwoPassSplayStrategy>>();
 	test_against_simple::<StandardRootedDynamicForest<LocalTwoPassSplayStrategy>>();
 	test_against_simple::<StandardRootedDynamicForest<MoveToRootStrategy>>();
+	test_against_simple::<StableRootedDynamicForest<GreedySplayStrategy>>();
+	test_against_simple::<StableRootedDynamicForest<TwoPassSplayStrategy>>();
+	test_against_simple::<StableRootedDynamicForest<LocalTwoPassSplayStrategy>>();
+	test_against_simple::<StableRootedDynamicForest<MoveToRootStrategy>>();
 
 	test_against_simple_eversible::<RootedLinkCutTreeWithEvert>();
 	test_against_simple_eversible::<StandardRootedDynamicForest<GreedySplayStrategy>>();
 	test_against_simple_eversible::<StandardRootedDynamicForest<TwoPassSplayStrategy>>();
 	test_against_simple_eversible::<StandardRootedDynamicForest<LocalTwoPassSplayStrategy>>();
 	test_against_simple_eversible::<StandardRootedDynamicForest<MoveToRootStrategy>>();
+	test_against_simple_eversible::<StableRootedDynamicForest<GreedySplayStrategy>>();
+	test_against_simple_eversible::<StableRootedDynamicForest<TwoPassSplayStrategy>>();
+	test_against_simple_eversible::<StableRootedDynamicForest<LocalTwoPassSplayStrategy>>();
+	test_against_simple_eversible::<StableRootedDynamicForest<MoveToRootStrategy>>();
 }
 
 fn test_basic_for<TRDynTree : RootedDynamicForest>() {

@@ -2,7 +2,7 @@
 
 use crate::common::EmptyNodeData;
 use crate::NodeIdx;
-use crate::twocut::{ExtendedNTRStrategy, NodesToTopPWImpl, StableNodesToTopPWImpl, StableNTRImplementation, StableNTRStrategy, StandardDynamicForest, ExtendedNTRImplementation};
+use crate::twocut::{ExtendedNTRStrategy, NodesToTopPWImpl, StableNodesToTopPWImpl, StableNTRImplementation, StableNTRStrategy, StandardDynamicForest, ExtendedNTRImplementation, NTRStrategy};
 use crate::twocut::basic::{STTRotate, STTStructureRead};
 use crate::twocut::node_data::{GroupPathWeightNodeData, MonoidPathWeightNodeData};
 use crate::twocut::rooted::StandardRootedDynamicForest;
@@ -102,7 +102,7 @@ Brings a node `v` to the top by repeatedly trying to do a splay step on `v`, or 
 #[derive(Clone)]
 pub struct GreedySplayStrategy {}
 
-impl StableNTRStrategy for GreedySplayStrategy {
+impl NTRStrategy for GreedySplayStrategy {
 	fn node_to_root( f : &mut (impl STTRotate + STTStructureRead), v : NodeIdx ) {
 		while let Some( p ) = f.get_parent( v ) {
 			if let Some( g ) = f.get_parent( p ) {
@@ -141,13 +141,9 @@ impl StableNTRStrategy for GreedySplayStrategy {
 		}
 	}
 }
+impl StableNTRStrategy for GreedySplayStrategy {}
 
 impl ExtendedNTRStrategy for GreedySplayStrategy {
-	fn node_to_root( f : &mut (impl STTRotate + STTStructureRead), v : NodeIdx ) {
-		<Self as StableNTRStrategy>::node_to_root( f, v );
-		debug_assert!( f.get_parent( v ).is_none() );
-	}
-
 	fn node_below_root( f : &mut (impl STTRotate + STTStructureRead), v : NodeIdx ) {
 		debug_assert!( f.get_parent( v ).is_some() );
 		loop {
@@ -222,7 +218,7 @@ impl TwoPassSplayStrategy {
 }
 
 
-impl StableNTRStrategy for TwoPassSplayStrategy {
+impl NTRStrategy for TwoPassSplayStrategy {
 	fn node_to_root( f : &mut (impl STTRotate + STTStructureRead), v : NodeIdx ) {
 		if let Some( b ) = Self::find_next_branching_node( f, v ) {
 			let mut x = b;
@@ -274,11 +270,9 @@ impl StableNTRStrategy for TwoPassSplayStrategy {
 	}
 }
 
+impl StableNTRStrategy for TwoPassSplayStrategy {}
+
 impl ExtendedNTRStrategy for TwoPassSplayStrategy {
-	fn node_to_root( f : &mut (impl STTRotate + STTStructureRead), v : NodeIdx ) {
-		<Self as StableNTRStrategy>::node_to_root( f, v );
-	}
-	
 	fn node_below_root( f : &mut (impl STTRotate + STTStructureRead), v : NodeIdx ) {
 		if let Some( b ) = Self::find_next_branching_node( f, v ) {
 			let mut x = b;
@@ -346,7 +340,7 @@ impl ExtendedNTRStrategy for TwoPassSplayStrategy {
 #[derive(Clone)]
 pub struct LocalTwoPassSplayStrategy {}
 
-impl StableNTRStrategy for LocalTwoPassSplayStrategy {
+impl NTRStrategy for LocalTwoPassSplayStrategy {
 	fn node_to_root( f : &mut (impl STTRotate + STTStructureRead), v : NodeIdx ) {
 		while let Some( p ) = f.get_parent( v ) {
 			if let Some( g ) = f.get_parent( p ) {
@@ -390,11 +384,9 @@ impl StableNTRStrategy for LocalTwoPassSplayStrategy {
 	}
 }
 
-impl ExtendedNTRStrategy for LocalTwoPassSplayStrategy {
-	fn node_to_root( f : &mut (impl STTRotate + STTStructureRead), v : NodeIdx ) {
-		<Self as StableNTRStrategy>::node_to_root( f, v );
-	}
+impl StableNTRStrategy for LocalTwoPassSplayStrategy {}
 
+impl ExtendedNTRStrategy for LocalTwoPassSplayStrategy {
 	fn node_below_root( f : &mut (impl STTRotate + STTStructureRead ), v : NodeIdx ) {
 		debug_assert!( f.get_parent( v ).is_some() );
 

@@ -2,7 +2,7 @@
 
 
 use crate::common::EmptyNodeData;
-use crate::twocut::{NodesToTopPWImpl, StableNodesToTopPWImpl, StableNTRImplementation, StableNTRStrategy, StandardDynamicForest, ExtendedNTRImplementation, ExtendedNTRStrategy};
+use crate::twocut::{NodesToTopPWImpl, StableNodesToTopPWImpl, StableNTRImplementation, StableNTRStrategy, StandardDynamicForest, ExtendedNTRImplementation, ExtendedNTRStrategy, NTRStrategy};
 use crate::NodeIdx;
 use crate::twocut::basic::{STTRotate, STTStructureRead};
 use crate::twocut::node_data::{GroupPathWeightNodeData, MonoidPathWeightNodeData};
@@ -69,14 +69,16 @@ impl MoveToRootStrategy
 	}
 }
 
-impl ExtendedNTRStrategy for MoveToRootStrategy {
+impl NTRStrategy for MoveToRootStrategy {
 	fn node_to_root(f: &mut (impl STTRotate + STTStructureRead), v: NodeIdx ) {
 		while let Some( p ) = f.get_parent( v ) {
 			Self::move_step( f, v, p );
 		}
 		debug_assert!( f.get_parent( v ).is_none() );
 	}
+}
 
+impl ExtendedNTRStrategy for MoveToRootStrategy {
 	fn node_below_root(f: &mut (impl STTRotate + STTStructureRead), v : NodeIdx ) {
 		debug_assert!( f.get_parent( v ).is_some() );
 		loop {
@@ -92,8 +94,4 @@ impl ExtendedNTRStrategy for MoveToRootStrategy {
 	}
 }
 
-impl StableNTRStrategy for MoveToRootStrategy {
-	fn node_to_root( f: &mut (impl STTRotate + STTStructureRead), v : NodeIdx ) {
-		<Self as ExtendedNTRStrategy>::node_to_root( f, v );
-	}
-}
+impl StableNTRStrategy for MoveToRootStrategy {}
