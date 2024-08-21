@@ -22,7 +22,20 @@ This will skip all benchmarks that haven't been executed before. To just show a 
 ./print_results.sh
 ```
 
-For more detailed options, after building the benchmarks using `./build_bench.sh`, executables can be called directly from the `stt-benchmarks/target/release` directory. Command-line help is available (including some options not used in the paper). Generation of plots can also be manually adjusted by running
+### Manual building and running
+
+Build the benchmark using
+```
+./build_bench.sh
+```
+
+Two optimization features are available. `stt/unsafe_node_access` disables bounds checking when accessing nodes in STT implementations, and `stt/space_efficient_nodes` decreases node space usage while adding a small runtime cost. Enable one or both features using:
+```
+./build_bench.sh "[space-separated feature list]"
+```
+
+
+Ater building, the benchmark executables can be called directly from the `stt-benchmarks/target/release` directory. Command-line help is available (including some options not used in the paper). Generation of plots can also be manually adjusted by running
 ```
 python3 show_benchmarks/visualize.py [...]
 ```

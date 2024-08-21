@@ -355,12 +355,28 @@ impl<TData : NodeData> STT<TData> {
 		)
 	}
 
+	#[cfg( not( feature = "unsafe_node_access" ) )]
 	fn node( &self, idx : NodeIdx ) -> &Node<TData> {
 		&self.nodes[idx.index()]
 	}
+	
+	#[cfg( feature = "unsafe_node_access" )]
+	fn node( &self, idx : NodeIdx ) -> &Node<TData> {
+		unsafe {
+			self.nodes.get_unchecked( idx.index() )
+		}
+	}
 
+	#[cfg( not( feature = "unsafe_node_access" ) )]
 	fn node_mut( &mut self, idx : NodeIdx ) -> &mut Node<TData> {
 		&mut self.nodes[idx.index()]
+	}
+	
+	#[cfg( feature = "unsafe_node_access" )]
+	fn node_mut( &mut self, idx : NodeIdx ) -> &mut Node<TData> {
+		unsafe {
+			self.nodes.get_unchecked_mut( idx.index() )
+		}
 	}
 	
 	/// The number of nodes in this forest.

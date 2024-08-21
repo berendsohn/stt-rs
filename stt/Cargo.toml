@@ -36,6 +36,9 @@ petgraph = ["dep:petgraph"]
 # Add functionality to randomly generate stuff
 generate = ["dep:rand"]
 
+# Access nodes without bounds checking
+unsafe_node_access = []
+
 # Print detailed information about MST computation (slow!)
 verbose_mst = []
 
