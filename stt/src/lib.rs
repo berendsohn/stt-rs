@@ -260,6 +260,7 @@ pub trait DynamicForest {
 /// allows accessing the internal structure of these implementations.
 /// 
 /// Note that these rooted trees may have different edge sets from the represented dynamic tree.
+#[portrait::make]
 pub trait RootedForest {
 	/// The parent of the given node.
 	/// 

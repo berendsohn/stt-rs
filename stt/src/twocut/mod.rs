@@ -198,23 +198,26 @@ impl<TNodeData, TNTRImpl, TCPWImpl> DynamicForest for StandardDynamicForest<TNod
 }
 
 
-/// A strategy to move nodes to the root and below the root.
-pub trait ExtendedNTRStrategy : Clone {
+/// A strategy to move nodes to the root.
+pub trait NTRStrategy : Clone {
 	/// Move the given node to the root.
 	fn node_to_root( f : &mut (impl STTRotate + STTStructureRead), v : NodeIdx );
+}
 
+
+/// A strategy to move nodes to the root and below the root.
+pub trait ExtendedNTRStrategy : NTRStrategy {
 	/// Move the given node up such that it becomes the child of the current root. The root is not changed.
 	fn node_below_root( f : &mut (impl STTRotate + STTStructureRead), v : NodeIdx );
 }
 
 /// A strategy to move nodes to the root which ensures the previous root does not move too much.
-/// 
+///
+/// More precisely, calling `node_to_root(v)` moves `v` to the root. If the previous root was `u != v`,
+/// then afterwards `u` and all ancestors of `u` are 1-cut.
+///
 /// Essentially, the stability requirement allows discarding the `node_below_root` function.
-pub trait StableNTRStrategy : Clone {
-	/// Move the given node to the root. If the previous root was u != v, then afterwards u and all
-	/// ancestor of u are 1-cut.
-	fn node_to_root( f : &mut (impl STTRotate + STTStructureRead), v : NodeIdx );
-}
+pub trait StableNTRStrategy : NTRStrategy {}
 
 
 /// A [NTRImplementation] based on an [ExtendedNTRStrategy].

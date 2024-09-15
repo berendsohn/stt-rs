@@ -51,6 +51,7 @@ fn opt_is_different<T : Copy + Eq>( opt : Option<T>, expected : T ) -> bool {
 }
 
 /// Trait to read the two-cut STT structure.
+#[portrait::make]
 pub trait STTStructureRead : RootedForest {
 	/// Get the 2-cut child of `v` that also has the parent of `v` in its boundary, if any.
 	fn get_direct_separator_child( &self, v : NodeIdx ) -> Option<NodeIdx>;
@@ -102,6 +103,7 @@ pub trait STTStructureRead : RootedForest {
 }
 
 /// Trait to execute rotations in 2-cut STTs.
+#[portrait::make]
 pub trait STTRotate : STTStructureRead {
 	/// Rotate v with its parent.
 	/// Requires that v is not the root, i.e., v has a parent.
