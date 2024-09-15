@@ -39,10 +39,10 @@ struct CLI {
 }
 
 fn write_queries( fp : &mut impl Write, num_vertices : usize, queries : &Vec<Query<EmptyGroupWeight>> ) {
-	writeln!( fp, "queries {} {}", num_vertices, queries.len() ).expect( "write error" );
+	writeln!( fp, "con {} {}", num_vertices, queries.len() ).expect( "write error" );
 	for query in queries {
 		match query {
-			InsertEdge( u, v, weight ) => writeln!( fp, "i {u} {v} {weight}" ),
+			InsertEdge( u, v, _ ) => writeln!( fp, "i {u} {v}" ),
 			DeleteEdge( u, v ) => writeln!( fp, "d {u} {v}" ),
 			PathWeight( u, v ) => writeln!( fp, "p {u} {v}" )
 		}.expect( "write error" );
@@ -56,9 +56,9 @@ fn print_query_type_dist( queries : &Vec<Query<EmptyGroupWeight>> ) {
 	
 	for query in queries {
 		match query {
-			Query::InsertEdge( _, _, _ ) => inserts += 1,
-			Query::DeleteEdge( _, _ ) => deletes += 1,
-			Query::PathWeight( _, _ ) => path_weights +=1
+			InsertEdge( _, _, _ ) => inserts += 1,
+			DeleteEdge( _, _ ) => deletes += 1,
+			PathWeight( _, _ ) => path_weights +=1
 		}
 	}
 	
@@ -68,13 +68,13 @@ fn print_query_type_dist( queries : &Vec<Query<EmptyGroupWeight>> ) {
 fn main() {
 	let cli = CLI::parse();
 	
-	let num_vertices : usize = cli.num_vertices;
+	let num_vertices = cli.num_vertices;
 	let num_queries = cli.num_queries;
 	
 	let verbose = cli.output_file.is_some();
 	
 	if verbose {
-		print!( "Generating {num_queries} queries on {num_vertices} vertices..." );
+		println!( "Generating {num_queries} queries on {num_vertices} vertices..." );
 		stdout().flush().expect( "Flushing failed!" );
 	}
 	

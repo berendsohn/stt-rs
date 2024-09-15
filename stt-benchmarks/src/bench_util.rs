@@ -14,8 +14,8 @@ use stt::link_cut::{LCTNodeData, LinkCutForest};
 use stt::onecut::SimpleDynamicTree;
 use stt::pg::PetgraphDynamicForest;
 use stt::rooted::SimpleRootedForest;
-use stt::twocut::mtrtt::{MoveToRootTT, RootedMoveToRootTT, StableMoveToRootTT};
-use stt::twocut::splaytt::{GreedySplayTT, LocalTwoPassSplayTT, MonoidTwoPassSplayTT, RootedGreedySplayTT, RootedLocalTwoPassSplayTT, RootedTwoPassSplayTT, StableGreedySplayTT, StableLocalTwoPassSplayTT, StableTwoPassSplayTT, TwoPassSplayTT};
+use stt::twocut::mtrtt::{MonoidStableMoveToRootTT, MoveToRootTT, RootedMoveToRootTT, StableMoveToRootTT};
+use stt::twocut::splaytt::{GreedySplayTT, LocalTwoPassSplayTT, RootedGreedySplayTT, RootedLocalTwoPassSplayTT, RootedTwoPassSplayTT, StableGreedySplayTT, StableLocalTwoPassSplayTT, StableTwoPassSplayTT, TwoPassSplayTT};
 use stt::twocut::UpdatingNodeData;
 use Query::*;
 
@@ -39,7 +39,7 @@ impl<TWeight : MonoidWeight> Query<TWeight> {
 
 /// Transforms a list of node pairs into queries
 /// 
-/// Uses a MonoidTwoPassSplayTT to determine valid queries.
+/// Uses a MonoidStableMoveToRootTT to determine valid queries.
 pub fn transform_into_queries<TWeight : MonoidWeight, TRng : Rng>(
 	num_nodes : usize,
 	node_pairs : impl Iterator<Item=(NodeIdx, NodeIdx)>,
@@ -48,7 +48,7 @@ pub fn transform_into_queries<TWeight : MonoidWeight, TRng : Rng>(
 	weight_query_prob : f64 )
 	-> Vec<Query<TWeight>>
 {
-	let mut f = MonoidTwoPassSplayTT::<MonoidWeightWithMaxEdge<EmptyGroupWeight>>::new( num_nodes );
+	let mut f = MonoidStableMoveToRootTT::<MonoidWeightWithMaxEdge<EmptyGroupWeight>>::new( num_nodes );
 	
 	node_pairs.map( |(u, v)| {
 		if let Some( w ) = f.compute_path_weight(u, v) {
