@@ -97,7 +97,7 @@ Journal of the ACM, 32(3):652–686, 1985.
 doi:[10.1145/3828.3835](https://doi.org/10.1145/3828.3835)
 */
 
-#![warn(missing_docs)]
+//#![warn(missing_docs)]
 #![warn(rustdoc::missing_crate_level_docs)]
 #![warn(rustdoc::private_doc_tests)]
 
