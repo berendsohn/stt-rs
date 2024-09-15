@@ -5,7 +5,7 @@ use crate::NodeIdx;
 use crate::twocut::{ExtendedNTRStrategy, NodesToTopPWImpl, StableNodesToTopPWImpl, StableNTRImplementation, StableNTRStrategy, StandardDynamicForest, ExtendedNTRImplementation, NTRStrategy};
 use crate::twocut::basic::{STTRotate, STTStructureRead};
 use crate::twocut::node_data::{GroupPathWeightNodeData, MonoidPathWeightNodeData};
-use crate::twocut::rooted::StandardRootedDynamicForest;
+use crate::twocut::rooted::{StableRootedDynamicForest, StandardRootedDynamicForest};
 
 /// A dynamic tree using [GreedySplayStrategy].
 pub type GreedySplayTT<TNodeData>
@@ -30,6 +30,9 @@ pub type EmptyStableGreedySplayTT = StableGreedySplayTT<EmptyNodeData>;
 /// A rooted dynamic forest using [GreedySplayStrategy].
 pub type RootedGreedySplayTT = StandardRootedDynamicForest<GreedySplayStrategy>;
 
+/// A rooted dynamic forest using [GreedySplayStrategy] as a stable strategy.
+pub type RootedStableGreedySplayTT = StableRootedDynamicForest<GreedySplayStrategy>;
+
 /// A dynamic tree using [TwoPassSplayStrategy].
 pub type TwoPassSplayTT<TNodeData>
 	= StandardDynamicForest<TNodeData, ExtendedNTRImplementation<TwoPassSplayStrategy>, NodesToTopPWImpl<TwoPassSplayStrategy>>;
@@ -52,6 +55,8 @@ pub type EmptyStableTwoPassSplayTT = StableTwoPassSplayTT<EmptyNodeData>;
 
 /// A rooted dynamic forest using [TwoPassSplayStrategy].
 pub type RootedTwoPassSplayTT = StandardRootedDynamicForest<TwoPassSplayStrategy>;
+/// A rooted dynamic forest using [TwoPassSplayStrategy] as a stable strategy.
+pub type RootedStableTwoPassSplayTT = StableRootedDynamicForest<TwoPassSplayStrategy>;
 
 /// A dynamic tree using [LocalTwoPassSplayStrategy].
 pub type LocalTwoPassSplayTT<TNodeData>
@@ -75,6 +80,8 @@ pub type EmptyStableLocalTwoPassSplayTT = StableLocalTwoPassSplayTT<EmptyNodeDat
 
 /// A rooted dynamic forest using [LocalTwoPassSplayStrategy].
 pub type RootedLocalTwoPassSplayTT = StandardRootedDynamicForest<LocalTwoPassSplayStrategy>;
+/// A rooted dynamic forest using [LocalTwoPassSplayStrategy] as a stable strategy.
+pub type RootedStableLocalTwoPassSplayTT = StableRootedDynamicForest<LocalTwoPassSplayStrategy>;
 
 
 // Common functions

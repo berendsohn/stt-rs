@@ -6,7 +6,7 @@ use crate::twocut::{NodesToTopPWImpl, StableNodesToTopPWImpl, StableNTRImplement
 use crate::NodeIdx;
 use crate::twocut::basic::{STTRotate, STTStructureRead};
 use crate::twocut::node_data::{GroupPathWeightNodeData, MonoidPathWeightNodeData};
-use crate::twocut::rooted::StandardRootedDynamicForest;
+use crate::twocut::rooted::{StableRootedDynamicForest, StandardRootedDynamicForest};
 
 /// A dynamic forest using a simple move-to-root strategy.
 pub type MoveToRootTT<TNodeData>
@@ -41,6 +41,9 @@ pub type GroupStableMoveToRootTT<TWeight> = StableMoveToRootTT<GroupPathWeightNo
 
 /// A rooted dynamic forest using a simple move-to-root strategy.
 pub type RootedMoveToRootTT = StandardRootedDynamicForest<MoveToRootStrategy>;
+
+/// A rooted dynamic forest using a simple move-to-root strategy (stable variant).
+pub type RootedStableMoveToRootTT = StableRootedDynamicForest<MoveToRootStrategy>;
 
 
 /// A dynamic tree implementation using the simple move-to-root strategy

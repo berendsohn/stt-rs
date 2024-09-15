@@ -132,9 +132,6 @@ impl<TNTRStrat: NTRStrategy> BasicRootedDynamicForest<TNTRStrat> {
 }
 
 
-
-
-
 /// An STT-based rooted dynamic forest using an [ExtendedNTRStrategy].
 #[derive(Clone)]
 pub struct StandardRootedDynamicForest<TNTRStrat : ExtendedNTRStrategy> {
@@ -227,8 +224,6 @@ impl<TNTRStrat : ExtendedNTRStrategy> EversibleRootedDynamicForest for StandardR
 		self.t.make_root( v );
 	}
 }
-
-
 
 
 /// An STT-based rooted dynamic forest using an [StableNTRStrategy].

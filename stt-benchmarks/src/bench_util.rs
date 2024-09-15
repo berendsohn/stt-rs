@@ -14,8 +14,8 @@ use stt::link_cut::{LCTNodeData, LinkCutForest};
 use stt::onecut::SimpleDynamicTree;
 use stt::pg::PetgraphDynamicForest;
 use stt::rooted::SimpleRootedForest;
-use stt::twocut::mtrtt::{MonoidStableMoveToRootTT, MoveToRootTT, RootedMoveToRootTT, StableMoveToRootTT};
-use stt::twocut::splaytt::{GreedySplayTT, LocalTwoPassSplayTT, RootedGreedySplayTT, RootedLocalTwoPassSplayTT, RootedTwoPassSplayTT, StableGreedySplayTT, StableLocalTwoPassSplayTT, StableTwoPassSplayTT, TwoPassSplayTT};
+use stt::twocut::mtrtt::{MonoidStableMoveToRootTT, MoveToRootTT, RootedMoveToRootTT, RootedStableMoveToRootTT, StableMoveToRootTT};
+use stt::twocut::splaytt::{GreedySplayTT, LocalTwoPassSplayTT, RootedGreedySplayTT, RootedLocalTwoPassSplayTT, RootedStableGreedySplayTT, RootedStableLocalTwoPassSplayTT, RootedStableTwoPassSplayTT, RootedTwoPassSplayTT, StableGreedySplayTT, StableLocalTwoPassSplayTT, StableTwoPassSplayTT, TwoPassSplayTT};
 use stt::twocut::UpdatingNodeData;
 use Query::*;
 
@@ -243,16 +243,22 @@ impl ImplDesc {
 pub enum RootedImplDesc {
 	LinkCut,
 	GreedySplay,
+	StableGreedySplay,
 	TwoPassSplay,
+	StableTwoPassSplay,
 	LocalTwoPassSplay,
+	StableLocalTwoPassSplay,
 	MoveToRoot,
+	StableMoveToRoot,
 	Simple
 }
 
 impl RootedImplDesc {
 	pub fn all() -> Vec<RootedImplDesc> {
-		vec![RootedImplDesc::LinkCut, RootedImplDesc::GreedySplay, RootedImplDesc::TwoPassSplay,
-			RootedImplDesc::LocalTwoPassSplay, RootedImplDesc::MoveToRoot, RootedImplDesc::Simple]
+		vec![RootedImplDesc::LinkCut, RootedImplDesc::GreedySplay, RootedImplDesc::StableGreedySplay,
+			RootedImplDesc::TwoPassSplay, RootedImplDesc::StableTwoPassSplay,
+			RootedImplDesc::LocalTwoPassSplay, RootedImplDesc::StableLocalTwoPassSplay,
+			RootedImplDesc::MoveToRoot, RootedImplDesc::StableMoveToRoot, RootedImplDesc::Simple]
 	}
 }
 
@@ -333,9 +339,21 @@ impl ImplName for RootedGreedySplayTT {
 	}
 }
 
+impl ImplName for RootedStableGreedySplayTT {
+	fn name() -> &'static str {
+		"Stable Greedy Splay"
+	}
+}
+
 impl ImplName for RootedTwoPassSplayTT {
 	fn name() -> &'static str {
 		"2P Splay"
+	}
+}
+
+impl ImplName for RootedStableTwoPassSplayTT {
+	fn name() -> &'static str {
+		"Stable 2P Splay"
 	}
 }
 
@@ -345,9 +363,21 @@ impl ImplName for RootedLocalTwoPassSplayTT {
 	}
 }
 
+impl ImplName for RootedStableLocalTwoPassSplayTT {
+	fn name() -> &'static str {
+		"Stable L2P Splay"
+	}
+}
+
 impl ImplName for RootedMoveToRootTT {
 	fn name() -> &'static str {
 		"MTR"
+	}
+}
+
+impl ImplName for RootedStableMoveToRootTT {
+	fn name() -> &'static str {
+		"Stable MTR"
 	}
 }
 
@@ -439,9 +469,13 @@ macro_rules! do_for_impl_rooted {
 			match $imp_enum {
 				stt_benchmarks::bench_util::RootedImplDesc::LinkCut => $do_mac!( $obj, RootedLinkCutTree ),
 				stt_benchmarks::bench_util::RootedImplDesc::GreedySplay => $do_mac!( $obj, RootedGreedySplayTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::StableGreedySplay => $do_mac!( $obj, RootedStableGreedySplayTT ),
 				stt_benchmarks::bench_util::RootedImplDesc::TwoPassSplay => $do_mac!( $obj, RootedTwoPassSplayTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::StableTwoPassSplay => $do_mac!( $obj, RootedStableTwoPassSplayTT ),
 				stt_benchmarks::bench_util::RootedImplDesc::LocalTwoPassSplay => $do_mac!( $obj, RootedLocalTwoPassSplayTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::StableLocalTwoPassSplay => $do_mac!( $obj, RootedStableLocalTwoPassSplayTT ),
 				stt_benchmarks::bench_util::RootedImplDesc::MoveToRoot => $do_mac!( $obj, RootedMoveToRootTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::StableMoveToRoot => $do_mac!( $obj, RootedStableMoveToRootTT ),
 				stt_benchmarks::bench_util::RootedImplDesc::Simple => $do_mac!( $obj, SimpleRootedForest )
 			}
 		}
@@ -457,9 +491,13 @@ macro_rules! do_for_impl_eversible_rooted {
 			match $imp_enum {
 				stt_benchmarks::bench_util::RootedImplDesc::LinkCut => $do_mac!( $obj, RootedLinkCutTreeWithEvert ),
 				stt_benchmarks::bench_util::RootedImplDesc::GreedySplay => $do_mac!( $obj, RootedGreedySplayTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::StableGreedySplay => $do_mac!( $obj, RootedStableGreedySplayTT ),
 				stt_benchmarks::bench_util::RootedImplDesc::TwoPassSplay => $do_mac!( $obj, RootedTwoPassSplayTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::StableTwoPassSplay => $do_mac!( $obj, RootedStableTwoPassSplayTT ),
 				stt_benchmarks::bench_util::RootedImplDesc::LocalTwoPassSplay => $do_mac!( $obj, RootedLocalTwoPassSplayTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::StableLocalTwoPassSplay => $do_mac!( $obj, RootedStableLocalTwoPassSplayTT ),
 				stt_benchmarks::bench_util::RootedImplDesc::MoveToRoot => $do_mac!( $obj, RootedMoveToRootTT ),
+				stt_benchmarks::bench_util::RootedImplDesc::StableMoveToRoot => $do_mac!( $obj, RootedStableMoveToRootTT ),
 				stt_benchmarks::bench_util::RootedImplDesc::Simple => $do_mac!( $obj, SimpleRootedForest )
 			}
 		}
