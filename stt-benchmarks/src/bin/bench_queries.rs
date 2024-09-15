@@ -1,12 +1,17 @@
 use std::fmt::{Display, Formatter};
-use std::io::{stdout, Write};
+use std::fs::File;
+use std::io;
+use std::io::{BufRead, stdout, Write};
+use std::num::ParseIntError;
+use std::path::PathBuf;
+use std::time::Duration;
 
 use clap::{Parser, ValueEnum};
 use num_traits::pow::Pow;
 use rand::{distributions, SeedableRng};
 use rand::rngs::StdRng;
 use stt::common::{EmptyGroupWeight, IsizeAddGroupWeight, UsizeMaxMonoidWeight};
-use stt::DynamicForest;
+use stt::{DynamicForest, NodeIdx};
 use stt::generate::GeneratableMonoidWeight;
 use stt::link_cut::*;
 use stt::onecut::*;
@@ -44,47 +49,120 @@ struct Helper<TWeight>
 {
 	num_vertices : usize,
 	queries : Vec<Query<TWeight>>,
-	seed : u64,
-	weight_query_prob : f64,
-	print : PrintType
+	path_query_prob : f64,
+	print : PrintType,
+	repeat : usize
 }
 
 impl<TWeight> Helper<TWeight>
 	where TWeight : GeneratableMonoidWeight
 {
-	fn new( num_nodes: usize, num_queries : usize, seed : u64, print : PrintType,
-		   node_dist : NodeDistribution, weight_query_prob : f64 ) -> Helper<TWeight>
+	fn new( cli : &CLI ) -> Helper<TWeight>
 	{
-		if print == Print {
-			print!( "Generating queries with {node_dist} distribution..." );
-			stdout().flush().expect( "Flushing failed!" );
-		}
+		let print = PrintType::from_args( cli.print, cli.json );
+	
+		let num_vertices;
+		let queries;
 		
-		let mut rng = StdRng::seed_from_u64( seed );
-		let queries =  match node_dist {
-			NodeDistribution::Uniform => bench_util::generate_queries_with_node_dist(
-				num_nodes, num_queries, &mut rng, TWeight::generate, weight_query_prob, 
-				&distributions::Uniform::new( 0, num_nodes ) ),
-			NodeDistribution::Geometric => bench_util::generate_queries_with_node_dist(
-				num_nodes, num_queries, &mut rng, TWeight::generate, weight_query_prob,
-				&distributions::WeightedIndex::new( 
-					(0..num_nodes).map( |i| (1.-GEOM_P).pow( i as f64 ) ) )
-					.expect( "Couldn't create distribution" ) )
-		};
+		if let Some( path ) = &cli.input_file {
+			if print == Print {
+				print!( "Reading queries from {}...", path.display() );
+				stdout().flush().expect( "Flushing failed!" );
+			}
+			(num_vertices, queries) = Self::read_con_queries( path ).expect( "Couldn't read queries." );
+		}
+		else {
+			if print == Print {
+				print!( "Generating queries with {} distribution...", cli.dist );
+				stdout().flush().expect( "Flushing failed!" );
+			}
+			
+			num_vertices = cli.num_vertices;
+			
+			let num_queries = cli.num_queries.unwrap_or( match cli.dist {
+				NodeDistribution::Uniform => 20*num_vertices,
+				NodeDistribution::Geometric => ( 10. * (1. / (1. - GEOM_P )).pow( num_vertices as f64 ) ) as usize
+			} );
+			
+			let mut rng = StdRng::seed_from_u64( cli.seed.unwrap() );
+			queries =  match cli.dist {
+				NodeDistribution::Uniform => bench_util::generate_queries_with_node_dist(
+					num_vertices, num_queries, &mut rng, TWeight::generate, cli.path_query_prob, 
+					&distributions::Uniform::new( 0, num_vertices ) ),
+				NodeDistribution::Geometric => bench_util::generate_queries_with_node_dist(
+					num_vertices, num_queries, &mut rng, TWeight::generate, cli.path_query_prob,
+					&distributions::WeightedIndex::new( 
+						(0..num_vertices).map( |i| (1.-GEOM_P).pow( i as f64 ) ) )
+						.expect( "Couldn't create distribution" ) )
+			};
+		}
 		
 		if print == Print {
 			println!( " Done." );
 		}
 		
-		Helper{ num_vertices: num_nodes, queries, seed, weight_query_prob, print }
+		Helper{ num_vertices, queries, path_query_prob : cli.path_query_prob, print, repeat : cli.repeat }
+	}
+	
+	fn read_con_queries( path : &PathBuf ) -> io::Result<(usize, Vec<Query<TWeight>>)> {
+		let file = File::open( path )?;
+		let mut num_vertices = 0;
+		let mut queries : Vec<Query<TWeight>> = vec![];
+		for line in io::BufReader::new( file ).lines() {
+			let line = line?;
+			let parts : Vec<_> = line.split( " " ).collect();
+			if parts[0] == "con" {
+				// "con <num_vertices> <num_edges>"
+				if parts.len() == 3 {
+					if let Ok( n ) = parts[1].parse() {
+						// Ignore number of edges
+						num_vertices = n;
+						continue;
+					}
+				}
+				return Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid line: '{line}'" ) ) );
+			}
+			else if ["i", "d", "p"].contains( &parts[0] ) {
+				// "i/d/p <u> <v>
+	
+				fn parse_edge( edge_parts : &Vec<&str>) -> Result<(NodeIdx, NodeIdx), ParseIntError> {
+					let u = NodeIdx::new( edge_parts[1].parse()? );
+					let v = NodeIdx::new( edge_parts[2].parse()? );
+					return Ok( (u,v) )
+				}
+				
+				if parts.len() == 3 {
+					if let Ok( e ) = parse_edge( &parts ) {
+						let (u, v) = e;
+						queries.push( match parts[0] {
+							"i" => Query::InsertEdge( u, v, TWeight::identity() ),
+							"d" => Query::DeleteEdge( u, v ),
+							"p" => Query::PathWeight( u, v ),
+							_ => panic!()
+						} );
+						continue
+					}
+				}
+				return Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid line: '{line}'" ) ) );
+			}
+			else if parts[0] == "c" {} // Ignore comment
+			else {
+				return Err( io::Error::new( io::ErrorKind::Other, format!( "Invalid line: '{line}'" ) ) );
+			}
+		}
+		Ok( (num_vertices, queries) )
 	}
 	
 	fn benchmark<TDynForest>( &self, impl_name : &str )
 		where TDynForest : DynamicForest<TWeight=TWeight>
 	{
-		let duration = bench_util::benchmark_queries::<TDynForest>( self.num_vertices, &self.queries );
+		let mut duration = Duration::ZERO;
+		for _ in 0..self.repeat {
+			duration += bench_util::benchmark_queries::<TDynForest>( self.num_vertices, &self.queries )
+		}
 		if self.print == Print {
-			let per_query_str = format!( "({:.3}µs/query)", duration.as_micros() as f64 / ( self.queries.len() as f64 ) );
+			let per_query_str = format!( "({:.3}µs/query)",
+				duration.as_micros() as f64 / ( self.queries.len() as f64 ) / ( self.repeat as f64 ) );
 			println!( "{impl_name:<20} {:8.3}ms {per_query_str:>17}", duration.as_micros() as f64 / 1000. )
 		}
 		else if self.print == Json {
@@ -92,9 +170,8 @@ impl<TWeight> Helper<TWeight>
 				name : impl_name,
 				num_vertices : self.num_vertices,
 				num_queries : self.queries.len(),
-				path_query_prob : self.weight_query_prob,
-				seed : self.seed,
-				time_ns : usize::try_from( duration.as_nanos() )
+				path_query_prob : self.path_query_prob,
+				time_ns : usize::try_from( duration.as_nanos() / ( self.repeat as u128 ) )
 					.expect( format!( "Duration too long: {}", duration.as_nanos() ).as_str() )
 			} ) )
 		}
@@ -225,6 +302,10 @@ struct CLI {
 	#[arg(short, long, default_value_t = NodeDistribution::Uniform)]
 	dist : NodeDistribution,
 	
+	/// Input file to read queries from. Currently only supports connectivity queries. Ignores -p, -s, --dist.
+	#[arg(short, long, group = "input")]
+	input_file : Option<PathBuf>,
+	
 	/// Print the results in human-readable form
 	#[arg(short, long, default_value_t = false)]
 	print : bool,
@@ -234,12 +315,16 @@ struct CLI {
 	json : bool,
 	
 	/// Seed for the random query generator
-	#[arg(short, long)]
-	seed : u64,
+	#[arg(short, long, group = "input")]
+	seed : Option<u64>,
 	
 	/// What weights to use in the benchmark.
 	#[arg(short, long, default_value_t = WeightType::Empty)]
 	weight : WeightType,
+	
+	/// How often to repeat the benchmark
+	#[arg(short, long, default_value_t = 1)]
+	repeat: usize,
 	
 	/// Implementations to benchmark. Include all but petgraph if omitted.
 	impls : Vec<ImplDesc>
@@ -249,28 +334,17 @@ struct CLI {
 fn main() {
 	let cli = CLI::parse();
 	
-	let num_vertices : usize = cli.num_vertices;
-	let num_queries = cli.num_queries.unwrap_or( match cli.dist {
-		NodeDistribution::Uniform => 20*num_vertices,
-		NodeDistribution::Geometric => ( 10. * (1. / (1. - GEOM_P )).pow( num_vertices as f64 ) ) as usize
-	} );
-	
-	let print = PrintType::from_args( cli.print, cli.json );
-	
 	let impls : Vec<ImplDesc>;
 	if !cli.impls.is_empty() {
-		impls = cli.impls;
+		impls = cli.impls.clone();
 	}
 	else {
 		impls = ImplDesc::all_efficient()
 	}
 	
 	match cli.weight {
-		WeightType::Empty => benchmark_empty( &Helper::new( cli.num_vertices,
-				num_queries, cli.seed, print, cli.dist, cli.path_query_prob ), &impls ),
-		WeightType::Group => benchmark_group( &Helper::new( cli.num_vertices,
-			num_queries, cli.seed, print, cli.dist, cli.path_query_prob ), &impls ),
-		WeightType::Monoid => benchmark_monoid( &Helper::new( cli.num_vertices,
-			num_queries, cli.seed, print, cli.dist, cli.path_query_prob ), &impls )
+		WeightType::Empty => benchmark_empty( &Helper::new( &cli ), &impls ),
+		WeightType::Group => benchmark_group( &Helper::new( &cli ), &impls ),
+		WeightType::Monoid => benchmark_monoid( &Helper::new( &cli ), &impls )
 	}
 }
