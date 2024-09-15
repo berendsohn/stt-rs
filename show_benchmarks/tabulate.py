@@ -22,7 +22,6 @@ except ImportError :
 JsonObj = Dict[str, Any]
 
 ALGORITHMS = [
-	"Petgraph",
 	"Kruskal (petgraph)",
 	"Link-cut",
 	"Greedy Splay",
@@ -34,7 +33,14 @@ ALGORITHMS = [
 	"MTR",
 	"Stable MTR",
 	"1-cut",
-	"Simple"
+	"Petgraph",
+	"Simple",
+	"./stt-cpp/bin/greedy_stt",
+	"./stt-cpp/bin/ltp_stt",
+	"./stt-cpp/bin/mtr_stt",
+	"./dtree/dtree_queries",
+	"./tarjan-werneck/connectivity_st_v",
+	"./tarjan-werneck/connectivity_st_e"
 ]
 
 
@@ -76,6 +82,13 @@ DEFAULT_KEY_TEMPLATES = {
 }
 
 
+def int_to_nice_str( i : int ) -> str :
+	s = str( i )
+	if len( s ) <= 4 :
+		return s
+	else :
+		return "".join( c + r"\," if i % 3 == ( len( s ) - 1 ) % 3 and i < len( s ) - 1 else c for i, c in enumerate ( s ) )
+
 
 def main() :
 	parser = argparse.ArgumentParser( description = "Convert stt benchmark results into a table." )
@@ -93,6 +106,7 @@ def main() :
 	parser.add_argument( "--latex-key-template", default = None )
 	# parser.add_argument( "--algorithm", choices = sorted( ALGORITHMS ), help = "Only use the specified algorithm" )
 	parser.add_argument( "--exclude", nargs="*", choices = sorted( ALGORITHMS ), help = "Exclude the specified algorithm(s)" )
+	parser.add_argument( "--rename", nargs="*", help = "Rename algorithms; format: 'key:val'" )
 	parser.add_argument( "--exclude-key", nargs="*", help = "Exclude the specified key(s)" )
 	parser.add_argument( "--stdev", action = "store_true", help = "Include standard deviation" )
 	parser.add_argument( "--range", type = float, default = None,
@@ -152,8 +166,8 @@ def main() :
 	benchmark_map = {k : dict( val ) for k, val in benchmark_map.items()}
 	
 	used_algorithms = set( benchmark_map.keys() )
-	algorithms = list( a for a in ALGORITHMS if a in used_algorithms ) # Preserve algorithm sorting
-	assert len( algorithms ) == len( used_algorithms )
+	algorithms = list( a for a in ALGORITHMS if a in used_algorithms ) \
+			+ list( a for a in used_algorithms if a not in ALGORITHMS) # Preserve algorithm sorting
 	
 	# For plain display
 	def display_mean( values : List[float] ) -> Optional[str] :
@@ -194,7 +208,8 @@ def main() :
 		key : { algo : display_mean( list( map( value_func, benchmark_map[algo].get( key, [] ) ) ) ) for algo in algorithms }
 		for key in keys
 	}
-				
+	
+	algo_names = { k : v for k, v in map( lambda s : s.split( ":" ), args.rename or () ) }		
 	
 	if args.format == "plain" :
 		algo_len = max( len( algo ) for algo in algorithms )
@@ -222,12 +237,20 @@ def main() :
 			sys.stdout.write( " with standard deviation" )
 		sys.stdout.write( r"}\\" )
 		sys.stdout.write( "\t\t" + r"\cmidrule{2-%d}Algorithm" % ( len( keys ) + 1 ) )
-		for key in keys :
-			sys.stdout.write( " & " + args.latex_key_template.format( key ) )
+		for idx, key in enumerate( keys ) :
+			key = int_to_nice_str( key )
+			if idx == 0 :
+				sys.stdout.write( " & " + args.latex_key_template.format( key ) )
+			else :
+				sys.stdout.write( f" & ${key}$" )
 		sys.stdout.write( r"\\" + "\n" )
 		sys.stdout.write( "\t\t" + r"\midrule" + "\n" )
 		for algo in algorithms :
-			sys.stdout.write( "\t\t" + algo )
+			algo_name = algo_names.get( algo, algo )
+			if algo_name.startswith( "Kruskal" ) : # TODO: Hack
+				sys.stdout.write( f"\t\t{algo_name}" )
+			else :
+				sys.stdout.write( f"\t\t\\dsimpl{{{algo_name}}}" )
 			for key in keys :
 				sys.stdout.write( " & " )
 				sys.stdout.write( value_dict[key][algo] )

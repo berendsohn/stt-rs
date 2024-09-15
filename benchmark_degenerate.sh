@@ -3,7 +3,7 @@
 . util.sh
 
 DATA_FILE=degenerate.jsonl
-REPEAT=20
+REPEAT=10
 
 mkdir -p results
 rm -f results/$DATA_FILE

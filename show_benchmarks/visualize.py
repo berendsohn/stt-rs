@@ -192,7 +192,7 @@ PROFILES = {
 			TitleFixedQueryDivisorSquared( "Fully-dynamic connectivity (q = n²/{})" )),
 	"degenerate" : ( XNumVerts(), YMicrosPerVertex, "Degenerate queries" ),
 	"degenerate-noisy" : ( XStdDev, YMillis, TitleFixedVertices( "Noisy degenerate queries (n = {})" ) ),
-	"queries-uniform" : ( XNumVerts( log_scale = False ),
+	"queries-uniform" : ( XNumVerts( log_scale = True ),
 			YMicrosPerQuery, TitleFixedQueryFactor( "Uniformly random queries (q/n = {})" ) ),
 	"queries-path-prob" : ( XPathProb, YMicrosPerQuery,
 			TitleFixedVal( "Random queries (n = {}, q = {})", lambda b : ( b["num_vertices"], b["num_queries"] ),

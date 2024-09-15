@@ -4,7 +4,7 @@
 
 INPUT_FILE=data/ogbl-collab/incremental_mst.txt
 DATA_FILE=mst_ogbl.jsonl
-REPEAT=5
+REPEAT=10
 
 
 if [ -f $INPUT_FILE ]

@@ -3,7 +3,7 @@
 . util.sh
 
 DATA_FILE=lca_evert.jsonl
-REPEAT=20
+REPEAT=10
 
 MAX_FOR_SIMPLE=20000
 
@@ -25,7 +25,7 @@ do
         s=$RANDOM
         if (( n <= MAX_FOR_SIMPLE ))
         then
-            ./stt-benchmarks/target/release/bench_lca -e -s $s -n $n -q $q --json >> results/$DATA_FILE || exit
+            ./stt-benchmarks/target/release/bench_lca -e -s $s -n $n -q $q --json link-cut greedy-splay two-pass-splay local-two-pass-splay move-to-root simple >> results/$DATA_FILE || exit
         else # Exclude simple impl
             ./stt-benchmarks/target/release/bench_lca -e -s $s -n $n -q $q --json link-cut greedy-splay two-pass-splay local-two-pass-splay move-to-root >> results/$DATA_FILE || exit
         fi

@@ -4,7 +4,6 @@ DELIM="-------------------------------------"
 
 echo "Uniformly random queries"
 python3 show_benchmarks/tabulate.py --input-file results/queries_uniform.jsonl --key num_vertices --value-unit ns --value-per query --decimal-places 2
-python3 show_benchmarks/tabulate.py --input-file results/queries_uniform_large.jsonl --key num_vertices --value-unit ns --value-per query --decimal-places 2
 
 echo $DELIM
 echo "Random queries with variable probability for compute_path_weight()"

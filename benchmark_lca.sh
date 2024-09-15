@@ -3,7 +3,7 @@
 . util.sh
 
 DATA_FILE=lca.jsonl
-REPEAT=20
+REPEAT=10
 
 MAX_FOR_SIMPLE=20000
 
@@ -25,9 +25,9 @@ do
         s=$RANDOM
         if (( n <= MAX_FOR_SIMPLE ))
         then
-            ./stt-benchmarks/target/release/bench_lca -s $s -n $n -q $q --json >> results/$DATA_FILE || exit
+            ./stt-benchmarks/target/release/bench_lca -s $s -n $n -q $q --json link-cut stable-greedy-splay stable-two-pass-splay local-stable-two-pass-splay stable-move-to-root simple >> results/$DATA_FILE || exit
         else # Exclude simple impl
-            ./stt-benchmarks/target/release/bench_lca -s $s -n $n -q $q --json link-cut greedy-splay two-pass-splay local-two-pass-splay move-to-root >> results/$DATA_FILE || exit
+            ./stt-benchmarks/target/release/bench_lca -s $s -n $n -q $q --json link-cut stable-greedy-splay stable-two-pass-splay local-stable-two-pass-splay stable-move-to-root >> results/$DATA_FILE || exit
         fi
         progress_bar_tick
     done
