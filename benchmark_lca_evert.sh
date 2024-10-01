@@ -5,12 +5,12 @@
 DATA_FILE=lca_evert.jsonl
 REPEAT=10
 
-MAX_FOR_SIMPLE=20000
+MAX_FOR_SIMPLE=50000
 
 mkdir -p results
 rm -f results/$DATA_FILE
 
-for n in 10000 20000 50000 100000 500000 1000000
+for n in 10000 20000 50000 100000 500000
 do
     let q=$n*10
     echo -n "Benchmark LCA/Evert with $n vertices and $q queries"

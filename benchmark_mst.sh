@@ -8,7 +8,7 @@ REPEAT=10
 mkdir -p results
 rm -f results/$DATA_FILE
 
-for n in 1000 2000 5000 10000 50000 100000 500000 1000000
+for n in 1000 2000 5000 10000 50000 100000 500000
 do
     echo "Benchmark MST with $n vertices"...
     progress_bar_start
